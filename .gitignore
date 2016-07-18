@@ -1,5 +1,14 @@
 *.class
 
+# Default basics
+target
+work
+.project
+.classpath
+.settings
+.idea
+*.iml
+
 # Mobile Tools for Java (J2ME)
 .mtj.tmp/
 

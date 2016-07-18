@@ -1,12 +1,10 @@
 # pipeline-graph-analysis-plugin
-Plugin for analyzing Jenkins pipeline (formerly workflow) runs by inspecting the directed acyclic graph of FlowNodes that comprises them.  
+Plugin for analyzing Jenkins pipeline (formerly workflow) runs by inspecting the directed acyclic graph of FlowNodes that comprises them. Intended for where dependencies prevent it from being including in the workflow api plugin.
 
 Planned contents:
 
-* Generic API (FlowScanner) for searching/filtering/visiting the flow graph that is implementation agnostic
-* Library of different graph exploration algorithms (depth-first search, single-ancestry search, single ancestry search that jumps over sibling blocks, forked search that visits parallel branches before proceding)
-* Utility library containing common searches and match conditions (predicates)
-* Caching implementation that continuously updates a piece of information exposed about an in-progress build as new nodes are added.
+* Timing/status computation APIs 
+* Some common visitors/predicates for working with stages & parallel blocks + utilities around them
 
 Future possibilities:
 
