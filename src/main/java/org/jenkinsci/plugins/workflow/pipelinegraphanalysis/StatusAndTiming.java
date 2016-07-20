@@ -117,12 +117,16 @@ public class StatusAndTiming {
         return false;
     }
 
-    public static GenericStatus getChunkStatus(@Nonnull WorkflowRun run,
-                                        @CheckForNull FlowNode before, @Nonnull FlowNode firstNode,
-                                        @Nonnull FlowNode lastNode, @CheckForNull FlowNode after) {
+    public static GenericStatus computeChunkStatus(@Nonnull WorkflowRun run,
+                                                   @CheckForNull FlowNode before, @Nonnull FlowNode firstNode,
+                                                   @Nonnull FlowNode lastNode, @CheckForNull FlowNode after) {
         verifySameRun(run, before, firstNode, lastNode, after);
+        if (!NotExecutedNodeAction.isExecuted(lastNode) || run.getExecution() == null) {
+            return GenericStatus.NOT_EXECUTED;
+        }
+        // TODO handle assignment of errors to a run of nodes where there is an ErrorAction
         boolean isLastChunk = after == null && run.getExecution().isCurrentHead(lastNode);
-        if (isLastChunk && run.isBuilding()) {
+        if (isLastChunk) {
             if (run.isBuilding()) {
                 return (isPendingInput(run)) ? GenericStatus.PAUSED_PENDING_INPUT : GenericStatus.IN_PROGRESS;
             } else {
@@ -146,11 +150,7 @@ public class StatusAndTiming {
 
         // Previous chunk before end. If flow continued beyond this, it didn't fail.
         // TODO check that previous assertion... what about blocks where the lastNode doesn't include BlockEndNode?
-        if (!NotExecutedNodeAction.isExecuted(lastNode)) {
-            return GenericStatus.NOT_EXECUTED;
-        } else {
-            return (run.getResult() == Result.UNSTABLE) ? GenericStatus.UNSTABLE : GenericStatus.SUCCESS;
-        }
+        return (run.getResult() == Result.UNSTABLE) ? GenericStatus.UNSTABLE : GenericStatus.SUCCESS;
     }
 
     /**
@@ -168,16 +168,20 @@ public class StatusAndTiming {
                                         @CheckForNull FlowNode before, @Nonnull FlowNode firstNode,
                                         @Nonnull FlowNode lastNode, @CheckForNull FlowNode after) {
         verifySameRun(run, before, firstNode, lastNode, after);
+        if (run.getExecution() == null) {
+            return null; //Haven't begun, timing is invalid
+        }
         long startTime = TimingAction.getStartTime(firstNode);
         long endTime = (after != null) ? TimingAction.getStartTime(after) : System.currentTimeMillis();
 
         if (!NotExecutedNodeAction.isExecuted(lastNode)) {
             return new TimingInfo(0,0);  // Nothing ran
-        }  else if (before == null) {
+        }
+        if (before == null) {
             startTime = run.getStartTimeInMillis();
-        } else if (after == null && run.getExecution().isComplete()) {
-            // Completed flow
-            endTime = TimingAction.getStartTime(lastNode);
+        }
+        if (after == null && run.getExecution().isComplete()) {
+            endTime = run.getDuration() + run.getStartTimeInMillis();
         }
         //TODO log me if startTime is 0 or handle missing TimingAction
 
@@ -269,7 +273,7 @@ public class StatusAndTiming {
             }
             LabelAction label = start.getAction(LabelAction.class);
             assert label != null;
-            statusMappings.put(label.getDisplayName(), getChunkStatus(run, parallelStart, start, end, parallelEnd));
+            statusMappings.put(label.getDisplayName(), computeChunkStatus(run, parallelStart, start, end, parallelEnd));
         }
         return statusMappings;
     }
