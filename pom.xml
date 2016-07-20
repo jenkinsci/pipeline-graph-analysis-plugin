@@ -96,6 +96,12 @@
             <version>${workflow.version}</version>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>org.jenkins-ci.plugins.pipeline-stage-view</groupId>
+            <artifactId>pipeline-rest-api</artifactId>
+            <version>1.6</version>
+            <scope>test</scope>
+        </dependency>
 
         <!-- May be able to remove these due to core -->
         <dependency>
