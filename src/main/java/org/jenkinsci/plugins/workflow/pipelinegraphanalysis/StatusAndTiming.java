@@ -19,27 +19,49 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.logging.Logger;
+
+import org.jenkinsci.plugins.workflow.graph.FlowStartNode;
+import org.jenkinsci.plugins.workflow.graph.FlowEndNode;
 
 /**
  * Provides common APIs for doing status and timing computations on flows
- * Concepts: a chunk, which is a set of {@link FlowNode}s in the same exection with a first and last node.
- * Chunks exist in a context
+ * <p/> <strong>Concepts:</strong> a chunk, which is a set of {@link FlowNode}s in the same {@link FlowExecution} with a first and last node.
+ * <p/> Chunks exist in a context: the FlowNode before and the FlowNode after.  These follow common-sense rules:
+ * <ol>
+ *     <li>If a chunk has a null before node, then its first node must be the {@link FlowStartNode} for that execution</li>
+ *     <li>If a chunk has a null after node, then its last node must be the {@link FlowEndNode} for that execution</li>
+ *     <li>Both may be true at once (then the chunk contains the entire execution)</li>
+ *     <li>First nodes must always occur before last nodes</li>
+ *     <li>Where a {@link WorkflowRun} is a parameter, it and the FlowNodes must all belong to the same execution</li>
+ * </ol>
  * @author Sam Van Oort
  */
 public class StatusAndTiming {
 
-    private static final Logger LOGGER = Logger.getLogger(StatusAndTiming.class.getName());
-
     // Sorted in increasing priority
     public enum GenericStatus {
+        /** Can't be determined for whatever reason, possibly in an undefined or transitory state */
         UNKNOWN,
+
+        /** We resumed from checkpoint or {@link Result#NOT_BUILT} status */
         NOT_EXECUTED,
+
+        /** Success, ex {@link Result#SUCCESS} */
         SUCCESS,
+
+        /** Recoverable failures, such as noncritical tests, ex {@link Result#UNSTABLE} */
         UNSTABLE,
+
+        /** Still executing, waiting for a result */
         IN_PROGRESS,
-        FAILED,
+
+        /** Ran and explicitly failed, i.e. {@link Result#FAILURE} */
+        FAILURE,
+
+        /** Aborted while running, no way to determine final outcome {@link Result#ABORTED} */
         ABORTED,
+
+        /** We are waiting for user input to continue (special case IN_PROGRESS */
         PAUSED_PENDING_INPUT
     }
 
@@ -74,6 +96,8 @@ public class StatusAndTiming {
         }
     }
 
+    // TODO create a version of the core APIs that takes a FlowChunk from the workflow-api library
+
     /**
      * Get the start time for node, or null if not present
      * @param node Node to get time for
@@ -86,7 +110,7 @@ public class StatusAndTiming {
     }
 
     /**
-     * Check that all the flownodes belong to the same execution as run
+     * Check that all the flownodes & run describe the same pipeline run/execution
      * @param run Run that nodes must belong to
      * @param nodes Nodes to match to run
      * @throws IllegalArgumentException For the first flownode that doesn't belong to the FlowExectuon of run
@@ -105,6 +129,7 @@ public class StatusAndTiming {
         }
     }
 
+    /** Return true if the run is paused on input */
     public static boolean isPendingInput(WorkflowRun run) {
         // Logic borrowed from Pipeline Stage View plugin, RuneEx
         InputAction inputAction = run.getAction(InputAction.class);
@@ -117,15 +142,26 @@ public class StatusAndTiming {
         return false;
     }
 
+    /**
+     * Compute the overall status for a chunk, see assumptions at top
+     * @param run
+     * @param before
+     * @param firstNode
+     * @param lastNode
+     * @param after
+     * @return
+     */
+    @Nonnull
     public static GenericStatus computeChunkStatus(@Nonnull WorkflowRun run,
                                                    @CheckForNull FlowNode before, @Nonnull FlowNode firstNode,
                                                    @Nonnull FlowNode lastNode, @CheckForNull FlowNode after) {
+        FlowExecution exec = run.getExecution();
         verifySameRun(run, before, firstNode, lastNode, after);
-        if (!NotExecutedNodeAction.isExecuted(lastNode) || run.getExecution() == null) {
+        if (!NotExecutedNodeAction.isExecuted(lastNode) || exec == null) {
             return GenericStatus.NOT_EXECUTED;
         }
         // TODO handle assignment of errors to a run of nodes where there is an ErrorAction
-        boolean isLastChunk = after == null && run.getExecution().isCurrentHead(lastNode);
+        boolean isLastChunk = after == null && exec.isCurrentHead(lastNode);
         if (isLastChunk) {
             if (run.isBuilding()) {
                 return (isPendingInput(run)) ? GenericStatus.PAUSED_PENDING_INPUT : GenericStatus.IN_PROGRESS;
@@ -137,13 +173,13 @@ public class StatusAndTiming {
                 } else if (r == Result.ABORTED) {
                     return GenericStatus.ABORTED;
                 } else if (r == Result.FAILURE ) {
-                    return GenericStatus.FAILED;
+                    return GenericStatus.FAILURE;
                 } else if (r == Result.UNSTABLE ) {
                     return GenericStatus.UNSTABLE;
                 } else if (r == Result.SUCCESS) {
                     return GenericStatus.SUCCESS;
                 } else {
-                    return GenericStatus.FAILED;
+                    return GenericStatus.FAILURE;
                 }
             }
         }
@@ -167,10 +203,11 @@ public class StatusAndTiming {
     public static TimingInfo computeChunkTiming(@Nonnull WorkflowRun run, long pauseDuration,
                                         @CheckForNull FlowNode before, @Nonnull FlowNode firstNode,
                                         @Nonnull FlowNode lastNode, @CheckForNull FlowNode after) {
-        verifySameRun(run, before, firstNode, lastNode, after);
-        if (run.getExecution() == null) {
-            return null; //Haven't begun, timing is invalid
+        FlowExecution exec = run.getExecution();
+        if (exec == null) {
+            return null; // Haven't begun, timing is invalid
         }
+        verifySameRun(run, before, firstNode, lastNode, after);
         long startTime = TimingAction.getStartTime(firstNode);
         long endTime = (after != null) ? TimingAction.getStartTime(after) : System.currentTimeMillis();
 
@@ -180,7 +217,7 @@ public class StatusAndTiming {
         if (before == null) {
             startTime = run.getStartTimeInMillis();
         }
-        if (after == null && run.getExecution().isComplete()) {
+        if (after == null && exec.isComplete()) {
             endTime = run.getDuration() + run.getStartTimeInMillis();
         }
         //TODO log me if startTime is 0 or handle missing TimingAction
@@ -196,6 +233,7 @@ public class StatusAndTiming {
      * @param parallelEnd
      * @return
      */
+    @CheckForNull
     public static TimingInfo computeTimingForParallel(@Nonnull WorkflowRun run,
                                                      @Nonnull Map<String, TimingInfo> branchTimings,
                                                      @Nonnull FlowNode parallelStart, @CheckForNull FlowNode parallelEnd) {
@@ -214,11 +252,13 @@ public class StatusAndTiming {
         return new TimingInfo(overallDuration, maxPause);
     }
 
+    @Nonnull
     public static Map<String, TimingInfo> computeParallelBranchTimings(@Nonnull WorkflowRun run,
+                                                                       @Nonnull FlowNode parallelStart,
                                                                        @Nonnull List<BlockStartNode> branchStarts,
                                                                        @Nonnull List<FlowNode> branchEnds,
-                                                                       @Nonnull long[] pauseDurations,
-                                                                       @Nonnull FlowNode parallelStart, @CheckForNull FlowNode parallelEnd) {
+                                                                       @CheckForNull FlowNode parallelEnd,
+                                                                       @Nonnull long[] pauseDurations) {
 
         verifySameRun(run, branchStarts.toArray(new FlowNode[0]));
         verifySameRun(run, branchEnds.toArray(new FlowNode[0]));
@@ -253,6 +293,7 @@ public class StatusAndTiming {
      * @param parallelEnd End node for the overall parallelBlock (null if not complete)
      * @return
      */
+    @Nonnull
     public static Map<String, GenericStatus> computeBranchStatuses(@Nonnull WorkflowRun run,
                                                                @Nonnull List<BlockStartNode> branchStarts,
                                                                @Nonnull List<FlowNode> branchEnds,
@@ -279,7 +320,11 @@ public class StatusAndTiming {
     }
 
     /** Combines the status results from a list of parallel branches to report a single overall status */
+    @Nonnull
     public static GenericStatus condenseStatus(@Nonnull Collection<GenericStatus> statuses) {
+        if (statuses.isEmpty()) {
+            return GenericStatus.UNKNOWN; // Undefined
+        }
         return Collections.max(statuses);
     }
 }

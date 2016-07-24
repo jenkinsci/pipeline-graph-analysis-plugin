@@ -108,7 +108,7 @@ public class StatusAndTimingTest {
 
         // First non-start node to final end node
         status = StatusAndTiming.computeChunkStatus(run, n[0], n[1], n[5], null);
-        Assert.assertEquals(StatusAndTiming.GenericStatus.FAILED, status);
+        Assert.assertEquals(StatusAndTiming.GenericStatus.FAILURE, status);
 
         // Whole flow except for end... since no errors here, failure must be at end!
         status = StatusAndTiming.computeChunkStatus(run, n[0], n[1], n[4], n[5]);
