@@ -2,7 +2,6 @@ package org.jenkinsci.plugins.workflow.pipelinegraphanalysis;
 
 import hudson.model.Result;
 import org.jenkinsci.plugins.workflow.actions.ErrorAction;
-import org.jenkinsci.plugins.workflow.actions.LabelAction;
 import org.jenkinsci.plugins.workflow.actions.NotExecutedNodeAction;
 import org.jenkinsci.plugins.workflow.actions.ThreadNameAction;
 import org.jenkinsci.plugins.workflow.actions.TimingAction;
@@ -195,10 +194,8 @@ public class StatusAndTiming {
                     return GenericStatus.FAILURE;
                 } else if (r == Result.UNSTABLE ) {
                     return GenericStatus.UNSTABLE;
-                } else if (r == Result.SUCCESS) {
-                    return GenericStatus.SUCCESS;
                 } else {
-                    return GenericStatus.FAILURE;
+                    return GenericStatus.SUCCESS;
                 }
             }
         }
@@ -217,7 +214,7 @@ public class StatusAndTiming {
      * Compute timing for a chunk of nodes
      * TODO create version taking single object
      * @param run WorkflowRun they all belong to
-     * @param pauseDuration Millis paused (collected beforehand)
+     * @param internalPauseDuration Millis paused in the chunk (including the ends)
      * @param before Node before the chunk, if null assume this is the first piece of the flow and has nothing before
      * @param firstNode First node in the chunk
      * @param lastNode Last node in the chunk
@@ -225,7 +222,7 @@ public class StatusAndTiming {
      * @return Best guess at timing, or null if we can't compute anything
      */
     @CheckForNull
-    public static TimingInfo computeChunkTiming(@Nonnull WorkflowRun run, long pauseDuration,
+    public static TimingInfo computeChunkTiming(@Nonnull WorkflowRun run, long internalPauseDuration,
                                         @CheckForNull FlowNode before, @Nonnull FlowNode firstNode,
                                         @Nonnull FlowNode lastNode, @CheckForNull FlowNode after) {
         FlowExecution exec = run.getExecution();
@@ -247,7 +244,7 @@ public class StatusAndTiming {
         }
         //TODO log me if startTime is 0 or handle missing TimingAction
 
-        return new TimingInfo((endTime-startTime), Math.min(Math.abs(pauseDuration), (endTime-startTime)));
+        return new TimingInfo((endTime-startTime), Math.min(Math.abs(internalPauseDuration), (endTime-startTime)));
     }
 
     /**

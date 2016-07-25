@@ -1,8 +1,6 @@
 package org.jenkinsci.plugins.workflow.pipelinegraphanalysis;
 
 import com.cloudbees.workflow.flownode.FlowNodeUtil;
-import com.google.common.collect.Maps;
-import com.sun.tools.javac.comp.Flow;
 import hudson.model.Action;
 import hudson.model.Result;
 import hudson.model.queue.QueueTaskFuture;
@@ -10,12 +8,14 @@ import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.jenkinsci.plugins.workflow.actions.TimingAction;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
+import org.jenkinsci.plugins.workflow.cps.CpsFlowExecution;
 import org.jenkinsci.plugins.workflow.flow.FlowExecution;
 import org.jenkinsci.plugins.workflow.graph.BlockEndNode;
 import org.jenkinsci.plugins.workflow.graph.BlockStartNode;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
+import org.jenkinsci.plugins.workflow.support.steps.input.InputAction;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -300,12 +300,41 @@ public class StatusAndTimingTest {
     }
 
     // TODO test case to test NotExecutedNodeAction, in-progress normal with timing, in-progress parallels with timing
+    */
 
     @Test
     public void inputTest() throws Exception {
-        String resource = readResource(pipelinePrefix + "pauseforinput.groovy");
-        System.out.println(resource);
-    }*/
+        WorkflowJob job = j.jenkins.createProject(WorkflowJob.class, "InputJob");
+        job.setDefinition(new CpsFlowDefinition("" + // FlowStartNode: ID 2
+                "stage 'first' \n" + // FlowNode 3
+                "echo 'print something' \n" + // FlowNode 4
+                "input 'prompt' \n"));  // FlowNode 5, end node will be #6
+        QueueTaskFuture<WorkflowRun> buildTask = job.scheduleBuild2(0);
+        WorkflowRun run = buildTask.getStartCondition().get();
+        CpsFlowExecution e = (CpsFlowExecution) run.getExecutionPromise().get();
+        while (run.getAction(InputAction.class)==null) {
+            e.waitForSuspension();
+        }
+        e = (CpsFlowExecution)(run.getExecution());
+
+        // Check that a pipeline paused on input gets the same status, and timing reflects in-progress node running through to current time
+        StatusAndTiming.GenericStatus status = StatusAndTiming.computeChunkStatus(run, null, e.getNode("2"), e.getNode("5"), null);
+        Assert.assertEquals(StatusAndTiming.GenericStatus.PAUSED_PENDING_INPUT, status);
+        long currentTime = System.currentTimeMillis();
+        StatusAndTiming.TimingInfo timing = StatusAndTiming.computeChunkTiming(run, 0L, null, e.getNode("2"), e.getNode("5"), null);
+        long runTime = currentTime - run.getStartTimeInMillis();
+        Assert.assertEquals((double) (runTime), (double) (timing.getTotalDurationMillis()), 10.0); // Approx b/c depends on when currentTime gathered
+
+        // Test the aborted builds are handled right
+        // TODO figure out why the FlowExecution is null here...
+        /*
+        run.doKill();
+        j.waitForCompletion(run);
+        FlowExecution exec = run.getExecution();
+        status = StatusAndTiming.computeChunkStatus(run, null, exec.getNode("2"), exec.getNode("6"), null);
+        Assert.assertEquals(StatusAndTiming.GenericStatus.ABORTED, status);
+        */
+    }
 
     /** Helper, prints flow graph in some detail */
     public void printNodes(FlowExecution exec, long startTime, boolean showTiming, boolean showActions) {
