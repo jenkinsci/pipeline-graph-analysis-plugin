@@ -1,8 +1,10 @@
 package org.jenkinsci.plugins.workflow.pipelinegraphanalysis;
 
 import hudson.model.Result;
+import org.jenkinsci.plugins.workflow.actions.ErrorAction;
 import org.jenkinsci.plugins.workflow.actions.LabelAction;
 import org.jenkinsci.plugins.workflow.actions.NotExecutedNodeAction;
+import org.jenkinsci.plugins.workflow.actions.ThreadNameAction;
 import org.jenkinsci.plugins.workflow.actions.TimingAction;
 import org.jenkinsci.plugins.workflow.flow.FlowExecution;
 import org.jenkinsci.plugins.workflow.graph.BlockEndNode;
@@ -94,6 +96,23 @@ public class StatusAndTiming {
         public void setPauseDurationMillis(long pauseDurationMillis) {
             this.pauseDurationMillis = pauseDurationMillis;
         }
+
+        @Override
+        public boolean equals(Object o) {
+            if (o == null || !(o instanceof TimingInfo)) {
+                return false;
+            } else if (this == o) {
+                return true;
+            }
+            TimingInfo ti = (TimingInfo)o;
+            return this.pauseDurationMillis == ti.pauseDurationMillis && this.totalDurationMillis == ti.totalDurationMillis;
+        }
+
+        @Override
+        public int hashCode() {
+            long mixed = (~pauseDurationMillis)  ^ totalDurationMillis;  // Bitwise invert because both are often equal
+            return (int)(mixed ^ (mixed >>> 32));
+        }
     }
 
     // TODO create a version of the core APIs that takes a FlowChunk from the workflow-api library
@@ -144,6 +163,7 @@ public class StatusAndTiming {
 
     /**
      * Compute the overall status for a chunk, see assumptions at top
+     * TODO create version that takes a single object
      * @param run
      * @param before
      * @param firstNode
@@ -160,8 +180,7 @@ public class StatusAndTiming {
         if (!NotExecutedNodeAction.isExecuted(lastNode) || exec == null) {
             return GenericStatus.NOT_EXECUTED;
         }
-        // TODO handle assignment of errors to a run of nodes where there is an ErrorAction
-        boolean isLastChunk = after == null && exec.isCurrentHead(lastNode);
+        boolean isLastChunk = after == null || exec.isCurrentHead(lastNode);
         if (isLastChunk) {
             if (run.isBuilding()) {
                 return (isPendingInput(run)) ? GenericStatus.PAUSED_PENDING_INPUT : GenericStatus.IN_PROGRESS;
@@ -183,6 +202,11 @@ public class StatusAndTiming {
                 }
             }
         }
+        ErrorAction err = lastNode.getError();
+        if (err != null) {
+            // If next node lacks and ErrorAction, the error was caught in a catch block
+            return (after.getError() == null) ? GenericStatus.SUCCESS : GenericStatus.FAILURE;
+        }
 
         // Previous chunk before end. If flow continued beyond this, it didn't fail.
         // TODO check that previous assertion... what about blocks where the lastNode doesn't include BlockEndNode?
@@ -191,6 +215,7 @@ public class StatusAndTiming {
 
     /**
      * Compute timing for a chunk of nodes
+     * TODO create version taking single object
      * @param run WorkflowRun they all belong to
      * @param pauseDuration Millis paused (collected beforehand)
      * @param before Node before the chunk, if null assume this is the first piece of the flow and has nothing before
@@ -234,12 +259,12 @@ public class StatusAndTiming {
      * @return
      */
     @CheckForNull
-    public static TimingInfo computeTimingForParallel(@Nonnull WorkflowRun run,
-                                                     @Nonnull Map<String, TimingInfo> branchTimings,
-                                                     @Nonnull FlowNode parallelStart, @CheckForNull FlowNode parallelEnd) {
+    public static TimingInfo computeOverallParallelTiming(@Nonnull WorkflowRun run,
+                                                          @Nonnull Map<String, TimingInfo> branchTimings,
+                                                          @Nonnull FlowNode parallelStart, @CheckForNull FlowNode parallelEnd) {
         long overallDuration = 0;
         long maxPause = 0;
-        boolean isIncomplete = parallelEnd == null;
+        boolean isIncomplete = parallelEnd == null || run.isBuilding();
         for (TimingInfo t : branchTimings.values()) {
             maxPause = Math.max(maxPause, t.getPauseDurationMillis());
             if (isIncomplete) {
@@ -252,6 +277,18 @@ public class StatusAndTiming {
         return new TimingInfo(overallDuration, maxPause);
     }
 
+    /**
+     * TODO Convert to Map of start & end nodes, not parallel lists
+     * TODO create version taking objects not raw nodes
+     * TODO version that will take this and return aggregated timing
+     * @param run
+     * @param parallelStart
+     * @param branchStarts
+     * @param branchEnds
+     * @param parallelEnd
+     * @param pauseDurations
+     * @return
+     */
     @Nonnull
     public static Map<String, TimingInfo> computeParallelBranchTimings(@Nonnull WorkflowRun run,
                                                                        @Nonnull FlowNode parallelStart,
@@ -277,9 +314,9 @@ public class StatusAndTiming {
                         + start.getId()+','
                         + end.getId());
             }
-            LabelAction label = start.getAction(LabelAction.class);
-            assert label != null;
-            timings.put(label.getDisplayName(), computeChunkTiming(run, pauseDurations[i], parallelStart, start, end, parallelEnd));
+            ThreadNameAction branchName = start.getAction(ThreadNameAction.class);
+            assert branchName != null;
+            timings.put(branchName.getThreadName(), computeChunkTiming(run, pauseDurations[i], parallelStart, start, end, parallelEnd));
         }
         return timings;
     }
@@ -295,11 +332,13 @@ public class StatusAndTiming {
      */
     @Nonnull
     public static Map<String, GenericStatus> computeBranchStatuses(@Nonnull WorkflowRun run,
-                                                               @Nonnull List<BlockStartNode> branchStarts,
-                                                               @Nonnull List<FlowNode> branchEnds,
-                                                               @Nonnull FlowNode parallelStart, @CheckForNull FlowNode parallelEnd) {
+                                                                   @Nonnull FlowNode parallelStart,
+                                                                   @Nonnull List<BlockStartNode> branchStarts,
+                                                                   @Nonnull List<FlowNode> branchEnds,
+                                                                   @CheckForNull FlowNode parallelEnd) {
         verifySameRun(run, branchStarts.toArray(new FlowNode[0]));
         verifySameRun(run, branchEnds.toArray(new FlowNode[0]));
+        verifySameRun(run, parallelStart, parallelEnd);
         if (branchStarts.size() != branchEnds.size()) {
             throw new IllegalArgumentException("Mismatched start and stop node counts: "+branchStarts.size()+","+branchEnds.size());
         }
@@ -312,9 +351,9 @@ public class StatusAndTiming {
                         + start.getId()+','
                         + end.getId());
             }
-            LabelAction label = start.getAction(LabelAction.class);
-            assert label != null;
-            statusMappings.put(label.getDisplayName(), computeChunkStatus(run, parallelStart, start, end, parallelEnd));
+            ThreadNameAction branchName = start.getAction(ThreadNameAction.class);
+            assert branchName != null;
+            statusMappings.put(branchName.getThreadName(), computeChunkStatus(run, parallelStart, start, end, parallelEnd));
         }
         return statusMappings;
     }
