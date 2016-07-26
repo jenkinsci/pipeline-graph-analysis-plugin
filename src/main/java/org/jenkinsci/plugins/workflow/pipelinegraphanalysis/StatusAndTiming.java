@@ -118,6 +118,12 @@ public class StatusAndTiming {
         boolean isLastChunk = after == null || exec.isCurrentHead(lastNode);
         if (isLastChunk) {
             if (run.isBuilding()) {
+                if (exec.getCurrentHeads().size() > 1 && lastNode instanceof BlockEndNode) {  // Check to see if all the action is on other branches
+                    BlockStartNode start = ((BlockEndNode)lastNode).getStartNode();
+                    if (start.getAction(ThreadNameAction.class) != null) {
+                        return (lastNode.getError() == null) ? GenericStatus.SUCCESS : GenericStatus.FAILURE;
+                    }
+                }
                 return (isPendingInput(run)) ? GenericStatus.PAUSED_PENDING_INPUT : GenericStatus.IN_PROGRESS;
             } else {
                 // Final chunk on completed build
@@ -155,7 +161,7 @@ public class StatusAndTiming {
      * @param firstNode First node in the chunk
      * @param lastNode Last node in the chunk
      * @param after Node after the chunk, if null we assume this chunk is at the end of the flow
-     * @return Best guess at timing, or null if we can't compute anything
+     * @return Best guess at timing, or null if we can't compute anything (no FlowExecution exists)
      */
     @CheckForNull
     public static TimingInfo computeChunkTiming(@Nonnull WorkflowRun run, long internalPauseDuration,
@@ -163,15 +169,26 @@ public class StatusAndTiming {
                                         @Nonnull FlowNode lastNode, @CheckForNull FlowNode after) {
         FlowExecution exec = run.getExecution();
         if (exec == null) {
-            return null; // Haven't begun, timing is invalid
+            return null; // Haven't begun execution, or execution was hard-killed, timing is invalid
+        }
+        if (!NotExecutedNodeAction.isExecuted(lastNode)) {
+            return new TimingInfo(0,0);  // Nothing ran
         }
         verifySameRun(run, before, firstNode, lastNode, after);
         long startTime = TimingAction.getStartTime(firstNode);
         long endTime = (after != null) ? TimingAction.getStartTime(after) : System.currentTimeMillis();
 
-        if (!NotExecutedNodeAction.isExecuted(lastNode)) {
-            return new TimingInfo(0,0);  // Nothing ran
+        // Fudge
+        boolean isLastChunk = after == null || exec.isCurrentHead(lastNode);
+        if (isLastChunk && run.isBuilding()) {
+            if (exec.getCurrentHeads().size() > 1 && lastNode instanceof BlockEndNode) {  // Check to see if all the action is on other branches
+                BlockStartNode start = ((BlockEndNode)lastNode).getStartNode();
+                if (start.getAction(ThreadNameAction.class) != null) {
+                    endTime = TimingAction.getStartTime(lastNode);  // Completed parallel branch, use the block end time
+                }
+            }
         }
+
         if (before == null) {
             startTime = run.getStartTimeInMillis();
         }
@@ -211,15 +228,16 @@ public class StatusAndTiming {
     }
 
     /**
+     * Compute timing for all branches of a parallel
      * TODO Convert to Map of start & end nodes, not parallel lists
-     * TODO create version taking objects not raw nodes
+     * TODO create version taking List of flowchunks, but with no pauses?
      * TODO version that will take this and return aggregated timing
-     * @param run
-     * @param parallelStart
-     * @param branchStarts
-     * @param branchEnds
-     * @param parallelEnd
-     * @param pauseDurations
+     * @param run Run the branches belong to
+     * @param parallelStart Start of parallel block
+     * @param branchStarts Nodes that begin each parallel branch
+     * @param branchEnds Nodes that represent the "tip" of each parallel branch (may be the end node, or just the latest)
+     * @param parallelEnd End of parallel block (null if in progress)
+     * @param pauseDurations Accumulated pause durations for each of the branches, in order
      * @return
      */
     @Nonnull
@@ -258,7 +276,7 @@ public class StatusAndTiming {
      * Compute status codes for a set of parallel branches
      * @param run Run containing these nodes
      * @param branchStarts The nodes starting off each parallel branch (BlockStartNode)
-     * @param branchEnds Last node in each parallel branch - currentHeads if currently executing and not a BlockEndNode if currently executing the parallels
+     * @param branchEnds Last node in each parallel branch - might be the end of the branch, or might just be the latest step run
      * @param parallelStart Start node for  overall parallel block
      * @param parallelEnd End node for the overall parallelBlock (null if not complete)
      * @return
