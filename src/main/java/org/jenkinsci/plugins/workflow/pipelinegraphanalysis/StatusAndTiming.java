@@ -9,6 +9,7 @@ import org.jenkinsci.plugins.workflow.flow.FlowExecution;
 import org.jenkinsci.plugins.workflow.graph.BlockEndNode;
 import org.jenkinsci.plugins.workflow.graph.BlockStartNode;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
+import org.jenkinsci.plugins.workflow.graphanalysis.FlowChunk;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 import org.jenkinsci.plugins.workflow.support.steps.input.InputAction;
 import org.jenkinsci.plugins.workflow.support.steps.input.InputStepExecution;
@@ -38,81 +39,6 @@ import org.jenkinsci.plugins.workflow.graph.FlowEndNode;
  * @author Sam Van Oort
  */
 public class StatusAndTiming {
-
-    // Sorted in increasing priority
-    public enum GenericStatus {
-        /** Can't be determined for whatever reason, possibly in an undefined or transitory state */
-        UNKNOWN,
-
-        /** We resumed from checkpoint or {@link Result#NOT_BUILT} status */
-        NOT_EXECUTED,
-
-        /** Success, ex {@link Result#SUCCESS} */
-        SUCCESS,
-
-        /** Recoverable failures, such as noncritical tests, ex {@link Result#UNSTABLE} */
-        UNSTABLE,
-
-        /** Still executing, waiting for a result */
-        IN_PROGRESS,
-
-        /** Ran and explicitly failed, i.e. {@link Result#FAILURE} */
-        FAILURE,
-
-        /** Aborted while running, no way to determine final outcome {@link Result#ABORTED} */
-        ABORTED,
-
-        /** We are waiting for user input to continue (special case IN_PROGRESS */
-        PAUSED_PENDING_INPUT
-    }
-
-    public static class TimingInfo {
-        private long totalDurationMillis;
-        private long pauseDurationMillis;
-
-        public TimingInfo() {
-            this.totalDurationMillis = 0;
-            this.pauseDurationMillis = 0;
-        }
-
-        public TimingInfo(long totalDurationMillis, long pauseDurationMillis) {
-            this.totalDurationMillis = totalDurationMillis;
-            this.pauseDurationMillis = pauseDurationMillis;
-        }
-
-        public long getTotalDurationMillis() {
-            return totalDurationMillis;
-        }
-
-        public void setTotalDurationMillis(long totalDurationMillis) {
-            this.totalDurationMillis = totalDurationMillis;
-        }
-
-        public long getPauseDurationMillis() {
-            return pauseDurationMillis;
-        }
-
-        public void setPauseDurationMillis(long pauseDurationMillis) {
-            this.pauseDurationMillis = pauseDurationMillis;
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (o == null || !(o instanceof TimingInfo)) {
-                return false;
-            } else if (this == o) {
-                return true;
-            }
-            TimingInfo ti = (TimingInfo)o;
-            return this.pauseDurationMillis == ti.pauseDurationMillis && this.totalDurationMillis == ti.totalDurationMillis;
-        }
-
-        @Override
-        public int hashCode() {
-            long mixed = (~pauseDurationMillis)  ^ totalDurationMillis;  // Bitwise invert because both are often equal
-            return (int)(mixed ^ (mixed >>> 32));
-        }
-    }
 
     // TODO create a version of the core APIs that takes a FlowChunk from the workflow-api library
 
@@ -158,6 +84,16 @@ public class StatusAndTiming {
             }
         }
         return false;
+    }
+
+    @Nonnull
+    public static GenericStatus computeChunkStatus(@Nonnull WorkflowRun run,
+                                                   @CheckForNull FlowNode before, FlowChunk chunk, @CheckForNull FlowNode after) {
+        FlowExecution exec = run.getExecution();
+        if (exec == null) {
+            return GenericStatus.NOT_EXECUTED;
+        }
+        return computeChunkStatus(run, before, chunk.getFirstNode(exec), chunk.getLastNode(exec), after);
     }
 
     /**

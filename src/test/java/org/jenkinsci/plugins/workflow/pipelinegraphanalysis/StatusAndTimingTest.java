@@ -91,43 +91,43 @@ public class StatusAndTimingTest {
 
         // Test status handling with the first few nodes
         FlowNode[] n = getNodes(run.getExecution(), new int[]{2, 3, 4, 5, 6, 7});
-        StatusAndTiming.GenericStatus status = StatusAndTiming.computeChunkStatus(run, null, n[0], n[1], n[2]);
-        StatusAndTiming.TimingInfo timing = StatusAndTiming.computeChunkTiming(run, 0, null, n[0], n[1], n[2]);
-        Assert.assertEquals(StatusAndTiming.GenericStatus.SUCCESS, status);
+        GenericStatus status = StatusAndTiming.computeChunkStatus(run, null, n[0], n[1], n[2]);
+        TimingInfo timing = StatusAndTiming.computeChunkTiming(run, 0, null, n[0], n[1], n[2]);
+        Assert.assertEquals(GenericStatus.SUCCESS, status);
         Assert.assertEquals(0, timing.getPauseDurationMillis());
         Assert.assertEquals(TimingAction.getStartTime(n[2]) - run.getStartTimeInMillis(), timing.getTotalDurationMillis());
 
         // Everything but start/end
         status = StatusAndTiming.computeChunkStatus(run, n[0], n[1], n[4], n[5]);
         timing = StatusAndTiming.computeChunkTiming(run, 2, n[0], n[1], n[4], n[5]);
-        Assert.assertEquals(StatusAndTiming.GenericStatus.SUCCESS, status);
+        Assert.assertEquals(GenericStatus.SUCCESS, status);
         Assert.assertEquals(timing.getPauseDurationMillis(), 2);
         Assert.assertEquals(TimingAction.getStartTime(n[5]) - TimingAction.getStartTime(n[1]), timing.getTotalDurationMillis());
 
         // Whole flow
         status = StatusAndTiming.computeChunkStatus(run, null, n[0], n[5], null);
         timing = StatusAndTiming.computeChunkTiming(run, 0, null, n[0], n[5], null);
-        Assert.assertEquals(StatusAndTiming.GenericStatus.SUCCESS, status);
+        Assert.assertEquals(GenericStatus.SUCCESS, status);
         Assert.assertEquals(0, timing.getPauseDurationMillis());
         Assert.assertEquals(run.getDuration(), timing.getTotalDurationMillis());
 
         // Custom unstable status
         run.setResult(Result.UNSTABLE);
         status = StatusAndTiming.computeChunkStatus(run, null, n[0], n[1], n[2]);
-        Assert.assertEquals(StatusAndTiming.GenericStatus.UNSTABLE, status);
+        Assert.assertEquals(GenericStatus.UNSTABLE, status);
 
         // Failure should assume last chunk ran is where failure happened
         run.setResult(Result.FAILURE);
         status = StatusAndTiming.computeChunkStatus(run, null, n[0], n[1], n[2]);
-        Assert.assertEquals(StatusAndTiming.GenericStatus.SUCCESS, status);
+        Assert.assertEquals(GenericStatus.SUCCESS, status);
 
         // First non-start node to final end node
         status = StatusAndTiming.computeChunkStatus(run, n[0], n[1], n[5], null);
-        Assert.assertEquals(StatusAndTiming.GenericStatus.FAILURE, status);
+        Assert.assertEquals(GenericStatus.FAILURE, status);
 
         // Whole flow except for end... since no errors here, failure must be at end!
         status = StatusAndTiming.computeChunkStatus(run, n[0], n[1], n[4], n[5]);
-        Assert.assertEquals(StatusAndTiming.GenericStatus.SUCCESS, status);
+        Assert.assertEquals(GenericStatus.SUCCESS, status);
     }
 
     /** Tests the assignment of error nodes to flows */
@@ -163,19 +163,19 @@ public class StatusAndTimingTest {
         j.assertBuildStatus(Result.FAILURE, run);
 
         // Whole flow
-        Assert.assertEquals(StatusAndTiming.GenericStatus.FAILURE, StatusAndTiming.computeChunkStatus(
+        Assert.assertEquals(GenericStatus.FAILURE, StatusAndTiming.computeChunkStatus(
                 run, null, exec.getNode("2"), exec.getNode("7"), null));
 
         // Start through to failure point
-        Assert.assertEquals(StatusAndTiming.GenericStatus.FAILURE, StatusAndTiming.computeChunkStatus(
+        Assert.assertEquals(GenericStatus.FAILURE, StatusAndTiming.computeChunkStatus(
                 run, null, exec.getNode("2"), exec.getNode("6"), exec.getNode("7")));
 
         // All but first/last node
-        Assert.assertEquals(StatusAndTiming.GenericStatus.FAILURE, StatusAndTiming.computeChunkStatus(
+        Assert.assertEquals(GenericStatus.FAILURE, StatusAndTiming.computeChunkStatus(
                 run, exec.getNode("2"), exec.getNode("3"), exec.getNode("6"), exec.getNode("7")));
 
         // Before failure node
-        Assert.assertEquals(StatusAndTiming.GenericStatus.SUCCESS, StatusAndTiming.computeChunkStatus(
+        Assert.assertEquals(GenericStatus.SUCCESS, StatusAndTiming.computeChunkStatus(
                 run, exec.getNode("2"), exec.getNode("3"), exec.getNode("5"), exec.getNode("6")));
     }
 
@@ -224,21 +224,21 @@ public class StatusAndTimingTest {
         FlowExecution exec = run.getExecution();
 
         // Overall flow
-        Assert.assertEquals(StatusAndTiming.GenericStatus.FAILURE, StatusAndTiming.computeChunkStatus(
+        Assert.assertEquals(GenericStatus.FAILURE, StatusAndTiming.computeChunkStatus(
                 run, null, exec.getNode("2"), exec.getNode("14"), null));
 
         // Failing branch
-        Assert.assertEquals(StatusAndTiming.GenericStatus.FAILURE, StatusAndTiming.computeChunkStatus(
+        Assert.assertEquals(GenericStatus.FAILURE, StatusAndTiming.computeChunkStatus(
                 run, exec.getNode("4"), exec.getNode("7"), exec.getNode("10"), exec.getNode("13")));
 
         // Passing branch
-        Assert.assertEquals(StatusAndTiming.GenericStatus.SUCCESS, StatusAndTiming.computeChunkStatus(
+        Assert.assertEquals(GenericStatus.SUCCESS, StatusAndTiming.computeChunkStatus(
                 run, exec.getNode("4"), exec.getNode("6"), exec.getNode("12"), exec.getNode("13")));
 
         // Check that branch statuses match
         List<BlockStartNode> parallelStarts = Arrays.asList((BlockStartNode) (exec.getNode("6")), (BlockStartNode) (exec.getNode("7")));
         List<FlowNode> parallelEnds = Arrays.asList(exec.getNode("12"), exec.getNode("10"));
-        Map<String, StatusAndTiming.GenericStatus> branchStatuses = StatusAndTiming.computeBranchStatuses(run, exec.getNode("4"),
+        Map<String, GenericStatus> branchStatuses = StatusAndTiming.computeBranchStatuses(run, exec.getNode("4"),
                 parallelStarts, parallelEnds,
                 exec.getNode("13"));
 
@@ -247,15 +247,15 @@ public class StatusAndTimingTest {
         List<String> outputBranchList = new ArrayList<String>(branchStatuses.keySet());
         Collections.sort(outputBranchList);
         Assert.assertArrayEquals(branches, outputBranchList.toArray());
-        Assert.assertEquals(StatusAndTiming.GenericStatus.FAILURE, branchStatuses.get("fail"));
-        Assert.assertEquals(StatusAndTiming.GenericStatus.SUCCESS, branchStatuses.get("success"));
+        Assert.assertEquals(GenericStatus.FAILURE, branchStatuses.get("fail"));
+        Assert.assertEquals(GenericStatus.SUCCESS, branchStatuses.get("success"));
 
         // Verify that overall status returns as failure
-        Assert.assertEquals(StatusAndTiming.GenericStatus.FAILURE, StatusAndTiming.condenseStatus(branchStatuses.values()));
+        Assert.assertEquals(GenericStatus.FAILURE, StatusAndTiming.condenseStatus(branchStatuses.values()));
 
         // Check timing computation for individual branches
         long[] simulatedPauses = {50L, 5L}; // success, fail
-        Map<String, StatusAndTiming.TimingInfo> branchTimings = StatusAndTiming.computeParallelBranchTimings(
+        Map<String, TimingInfo> branchTimings = StatusAndTiming.computeParallelBranchTimings(
             run, exec.getNode("4"), parallelStarts, parallelEnds, exec.getNode("13"), simulatedPauses
         );
         outputBranchList = new ArrayList<String>(branchTimings.keySet());
@@ -263,19 +263,19 @@ public class StatusAndTimingTest {
         Assert.assertArrayEquals(branches, outputBranchList.toArray());
 
         // Passing branch time, 5 ms pause was a present above
-        StatusAndTiming.TimingInfo successTiming = branchTimings.get("success");
+        TimingInfo successTiming = branchTimings.get("success");
         Assert.assertEquals(50L, successTiming.getPauseDurationMillis());
         long successRunTime = doTiming(exec, 6, 13);
         Assert.assertEquals(successRunTime, successTiming.getTotalDurationMillis());
 
         // Failing branch time, 50 ms pause was a present above
-        StatusAndTiming.TimingInfo failTiming = branchTimings.get("fail");
+        TimingInfo failTiming = branchTimings.get("fail");
         long failRunTime = doTiming(exec, 7, 13);
         Assert.assertEquals(Math.min(5L, failRunTime), failTiming.getPauseDurationMillis());
         Assert.assertEquals(failRunTime, failTiming.getTotalDurationMillis());
 
         // Check timing computation for overall result
-        StatusAndTiming.TimingInfo finalTiming = StatusAndTiming.computeOverallParallelTiming(
+        TimingInfo finalTiming = StatusAndTiming.computeOverallParallelTiming(
                 run, branchTimings, exec.getNode("4"), exec.getNode("13")
         );
         long totalBranchTiming = TimingAction.getStartTime(exec.getNode("13")) - TimingAction.getStartTime(exec.getNode("4"));
@@ -318,10 +318,10 @@ public class StatusAndTimingTest {
         e = (CpsFlowExecution)(run.getExecution());
 
         // Check that a pipeline paused on input gets the same status, and timing reflects in-progress node running through to current time
-        StatusAndTiming.GenericStatus status = StatusAndTiming.computeChunkStatus(run, null, e.getNode("2"), e.getNode("5"), null);
-        Assert.assertEquals(StatusAndTiming.GenericStatus.PAUSED_PENDING_INPUT, status);
+        GenericStatus status = StatusAndTiming.computeChunkStatus(run, null, e.getNode("2"), e.getNode("5"), null);
+        Assert.assertEquals(GenericStatus.PAUSED_PENDING_INPUT, status);
         long currentTime = System.currentTimeMillis();
-        StatusAndTiming.TimingInfo timing = StatusAndTiming.computeChunkTiming(run, 0L, null, e.getNode("2"), e.getNode("5"), null);
+        TimingInfo timing = StatusAndTiming.computeChunkTiming(run, 0L, null, e.getNode("2"), e.getNode("5"), null);
         long runTime = currentTime - run.getStartTimeInMillis();
         Assert.assertEquals((double) (runTime), (double) (timing.getTotalDurationMillis()), 10.0); // Approx b/c depends on when currentTime gathered
 
