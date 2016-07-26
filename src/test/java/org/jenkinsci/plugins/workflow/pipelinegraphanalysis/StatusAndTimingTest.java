@@ -366,7 +366,9 @@ public class StatusAndTimingTest {
         // In-progress branch uses current time
         time = timings.get("pause");
         Assert.assertEquals(0, time.getPauseDurationMillis());
-        Assert.assertEquals((double)(incompleteBranchTime), (double)(time.getTotalDurationMillis()), 2.0);
+
+        TimingInfo info = StatusAndTiming.computeOverallParallelTiming(run, timings, exec.getNode("4"), null);
+        Assert.assertEquals((double)(incompleteBranchTime),(double)(info.getTotalDurationMillis()), 2.0);
 
         SemaphoreStep.success("wait/1", null);
     }
