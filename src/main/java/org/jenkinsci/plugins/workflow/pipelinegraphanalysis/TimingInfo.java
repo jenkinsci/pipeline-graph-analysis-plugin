@@ -1,5 +1,6 @@
 package org.jenkinsci.plugins.workflow.pipelinegraphanalysis;
 
+/** Container object for timing info about piece of a flow */
 public class TimingInfo {
     private long totalDurationMillis;
     private long pauseDurationMillis;

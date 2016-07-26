@@ -26,7 +26,8 @@ import org.jenkinsci.plugins.workflow.graph.FlowStartNode;
 import org.jenkinsci.plugins.workflow.graph.FlowEndNode;
 
 /**
- * Provides common APIs for doing status and timing computations on flows
+ * Provides common, comprehensive set of APIs for doing status and timing computations on pieces of a pipeline execution.
+ *
  * <p/> <strong>Concepts:</strong> a chunk, which is a set of {@link FlowNode}s in the same {@link FlowExecution} with a first and last node.
  * <p/> Chunks exist in a context: the FlowNode before and the FlowNode after.  These follow common-sense rules:
  * <ol>
@@ -36,22 +37,14 @@ import org.jenkinsci.plugins.workflow.graph.FlowEndNode;
  *     <li>First nodes must always occur before last nodes</li>
  *     <li>Where a {@link WorkflowRun} is a parameter, it and the FlowNodes must all belong to the same execution</li>
  * </ol>
+ * <p/> <strong>Parallel branch handling:</strong>
+ * <ol>
+ *     <ul>Each branch is considered independent</ul>
+ *     <ul>Branches may succeed, fail, or be in-progress/waiting for input.</ul>
+ * </ol>
  * @author Sam Van Oort
  */
 public class StatusAndTiming {
-
-    // TODO create a version of the core APIs that takes a FlowChunk from the workflow-api library
-
-    /**
-     * Get the start time for node, or null if not present
-     * @param node Node to get time for
-     * @return Start time of node in millis, or null if no timing present
-     */
-    @CheckForNull
-    public static Long getStartTime(@Nonnull FlowNode node) {
-        TimingAction time = node.getAction(TimingAction.class);
-        return (time == null) ? null : time.getStartTime();
-    }
 
     /**
      * Check that all the flownodes & run describe the same pipeline run/execution
@@ -97,14 +90,15 @@ public class StatusAndTiming {
     }
 
     /**
-     * Compute the overall status for a chunk, see assumptions at top
-     * TODO create version that takes a single object
-     * @param run
-     * @param before
-     * @param firstNode
-     * @param lastNode
-     * @param after
-     * @return
+     * Compute the overall status for a chunk comprising firstNode through lastNode, inclusive
+     * <p/> All nodes must be in the same execution
+     * <p/> Note: for in-progress builds with parallel branches, if the branch is done, it has its own status.
+     * @param run Run that nodes belong to
+     * @param before Node before the first node in this piece
+     * @param firstNode First node of this piece
+     * @param lastNode Last node of this piece (if lastNode==firstNode, it's a single FlowNode)
+     * @param after Node after this piece, null if the lastNode is the currentHead of the flow
+     * @return Status for the piece, or {@link GenericStatus#UNKNOWN} if the FlowExecution is null.
      */
     @Nonnull
     public static GenericStatus computeChunkStatus(@Nonnull WorkflowRun run,
@@ -148,13 +142,13 @@ public class StatusAndTiming {
         }
 
         // Previous chunk before end. If flow continued beyond this, it didn't fail.
-        // TODO check that previous assertion... what about blocks where the lastNode doesn't include BlockEndNode?
         return (run.getResult() == Result.UNSTABLE) ? GenericStatus.UNSTABLE : GenericStatus.SUCCESS;
     }
 
     /**
      * Compute timing for a chunk of nodes
-     * TODO create version taking single object
+     * <p/> Note: for in-progress builds with parallel branches, the running branches end at the current time.
+     *      Completed branches use the time at which the {@link BlockEndNode} terminating the branch was created.
      * @param run WorkflowRun they all belong to
      * @param internalPauseDuration Millis paused in the chunk (including the ends)
      * @param before Node before the chunk, if null assume this is the first piece of the flow and has nothing before
@@ -195,13 +189,13 @@ public class StatusAndTiming {
         if (after == null && exec.isComplete()) {
             endTime = run.getDuration() + run.getStartTimeInMillis();
         }
-        //TODO log me if startTime is 0 or handle missing TimingAction
 
         return new TimingInfo((endTime-startTime), Math.min(Math.abs(internalPauseDuration), (endTime-startTime)));
     }
 
     /**
-     * Computes the branch timings for a set of parallel branches
+     * Computes the branch timings for a set of parallel branches.
+     * This will comprise the longest pause time from any branch, and overall runtime.
      * @param run
      * @param branchTimings Map of branch name : precomputed timing info
      * @param parallelStart
@@ -229,16 +223,14 @@ public class StatusAndTiming {
 
     /**
      * Compute timing for all branches of a parallel
-     * TODO Convert to Map of start & end nodes, not parallel lists
-     * TODO create version taking List of flowchunks, but with no pauses?
-     * TODO version that will take this and return aggregated timing
+     * TODO Offer helper versions, perhaps with a list of chunks or a map but no pause durations
      * @param run Run the branches belong to
      * @param parallelStart Start of parallel block
      * @param branchStarts Nodes that begin each parallel branch
      * @param branchEnds Nodes that represent the "tip" of each parallel branch (may be the end node, or just the latest)
      * @param parallelEnd End of parallel block (null if in progress)
      * @param pauseDurations Accumulated pause durations for each of the branches, in order
-     * @return
+     * @return Map of branch name to timing.
      */
     @Nonnull
     public static Map<String, TimingInfo> computeParallelBranchTimings(@Nonnull WorkflowRun run,
@@ -273,13 +265,15 @@ public class StatusAndTiming {
     }
 
     /**
-     * Compute status codes for a set of parallel branches
+     * Compute status codes for a set of parallel branches.
+     * <p/>Note per {@link #computeChunkStatus(WorkflowRun, FlowNode, FlowChunk, FlowNode)} for in-progress builds with
+     *     parallel branches, if the branch is done, it has its own status.
      * @param run Run containing these nodes
      * @param branchStarts The nodes starting off each parallel branch (BlockStartNode)
      * @param branchEnds Last node in each parallel branch - might be the end of the branch, or might just be the latest step run
      * @param parallelStart Start node for  overall parallel block
      * @param parallelEnd End node for the overall parallelBlock (null if not complete)
-     * @return
+     * @return Map of branch name to its status
      */
     @Nonnull
     public static Map<String, GenericStatus> computeBranchStatuses(@Nonnull WorkflowRun run,

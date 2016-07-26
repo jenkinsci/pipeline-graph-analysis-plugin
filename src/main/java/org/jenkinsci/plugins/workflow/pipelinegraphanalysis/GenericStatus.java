@@ -12,27 +12,27 @@ public enum GenericStatus {
     UNKNOWN,
 
     /**
-     * We resumed from checkpoint or {@link Result#NOT_BUILT} status
+     * We resumed from checkpoint or {@link Result#NOT_BUILT} status - nothing ran in the chunk.
      */
     NOT_EXECUTED,
 
     /**
-     * Success, ex {@link Result#SUCCESS}
+     * Completed & successful, ex {@link Result#SUCCESS}
      */
     SUCCESS,
 
     /**
-     * Recoverable failures, such as noncritical tests, ex {@link Result#UNSTABLE}
+     * Completed with recoverable failures, such as noncritical tests, ex {@link Result#UNSTABLE}
      */
     UNSTABLE,
 
     /**
-     * Still executing, waiting for a result
+     * Not complete: still executing, waiting for a result
      */
     IN_PROGRESS,
 
     /**
-     * Ran and explicitly failed, i.e. {@link Result#FAILURE}
+     * Completed and explicitly failed, i.e. {@link Result#FAILURE}
      */
     FAILURE,
 
@@ -42,7 +42,7 @@ public enum GenericStatus {
     ABORTED,
 
     /**
-     * We are waiting for user input to continue (special case IN_PROGRESS
+     * Not complete: we are waiting for user input to continue (special case of IN_PROGRESS)
      */
     PAUSED_PENDING_INPUT
 }
