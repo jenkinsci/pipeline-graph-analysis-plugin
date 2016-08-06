@@ -13,13 +13,13 @@
     <artifactId>pipeline-graph-analysis</artifactId>
     <version>0.1-SNAPSHOT</version>
     <packaging>hpi</packaging>
-    <name>Pipeline Graph Analysis Plugin: Parent POM</name>
+    <name>Pipeline Graph Analysis Plugin</name>
     <!--<url>https://wiki.jenkins-ci.org/display/JENKINS/Pipeline+Graph+Analysis+Plugin</url>-->
 
     <scm>
-        <connection>scm:git:git://github.com/svanoort/pipeline-graph-analysis-plugin.git</connection>
-        <developerConnection>scm:git:git@github.com:svanoort/pipeline-graph-analysis-plugin.git</developerConnection>
-        <url>https://github.com/svanoort/pipeline-graph-analysis-plugin/</url>
+        <connection>scm:git:git://github.com/jenkinsci/pipeline-graph-analysis-plugin.git</connection>
+        <developerConnection>scm:git:git@github.com:jenkinsci/pipeline-graph-analysis-plugin.git</developerConnection>
+        <url>https://github.com/jenkinsci/pipeline-graph-analysis-plugin/</url>
         <tag>HEAD</tag>
     </scm>
 
@@ -145,7 +145,7 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-release-plugin</artifactId>
                 <configuration>
-                    <tagNameFormat>pipeline-stage-view-@{project.version}</tagNameFormat>
+                    <tagNameFormat>pipeline-graph-analysis-@{project.version}</tagNameFormat>
                 </configuration>
             </plugin>
         </plugins>
