@@ -33,13 +33,15 @@ import org.jenkinsci.plugins.workflow.flow.FlowExecution;
 import org.jenkinsci.plugins.workflow.graph.BlockEndNode;
 import org.jenkinsci.plugins.workflow.graph.BlockStartNode;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
-import org.jenkinsci.plugins.workflow.graphanalysis.FlowChunk;
+import org.jenkinsci.plugins.workflow.graphanalysis.MemoryFlowChunk;
+import org.jenkinsci.plugins.workflow.graphanalysis.ParallelMemoryFlowChunk;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 import org.jenkinsci.plugins.workflow.support.steps.input.InputAction;
 import org.jenkinsci.plugins.workflow.support.steps.input.InputStepExecution;
 
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -104,13 +106,17 @@ public class StatusAndTiming {
     }
 
     @Nonnull
-    public static GenericStatus computeChunkStatus(@Nonnull WorkflowRun run,
-                                                   @CheckForNull FlowNode before, FlowChunk chunk, @CheckForNull FlowNode after) {
+    public static GenericStatus computeChunkStatus(@Nonnull WorkflowRun run, @Nonnull MemoryFlowChunk chunk) {
         FlowExecution exec = run.getExecution();
         if (exec == null) {
             return GenericStatus.NOT_EXECUTED;
         }
-        return computeChunkStatus(run, before, chunk.getFirstNode(exec), chunk.getLastNode(exec), after);
+        if (chunk instanceof ParallelMemoryFlowChunk) {
+            ParallelMemoryFlowChunk par = ((ParallelMemoryFlowChunk) chunk);
+            return condenseStatus(computeBranchStatuses(run, par).values());
+        } else {
+            return computeChunkStatus(run, chunk.getNodeBefore(), chunk.getFirstNode(), chunk.getLastNode(), chunk.getNodeAfter());
+        }
     }
 
     /**
@@ -288,9 +294,22 @@ public class StatusAndTiming {
         return timings;
     }
 
+    @Nonnull
+    public static Map<String, GenericStatus> computeBranchStatuses(@Nonnull WorkflowRun run, @Nonnull ParallelMemoryFlowChunk parallel) {
+        Map<String,MemoryFlowChunk> branches = parallel.getBranches();
+        List<BlockStartNode> starts = new ArrayList<BlockStartNode>(branches.size());
+        List<FlowNode> ends = new ArrayList<FlowNode>(branches.size());
+        // We can optimize this if needed by not fetching the LabelAction below
+        for (MemoryFlowChunk chunk : branches.values()) {
+            starts.add((BlockStartNode)chunk.getFirstNode());
+            ends.add(chunk.getLastNode());
+        }
+        return computeBranchStatuses(run, parallel.getFirstNode(), starts, ends, parallel.getLastNode());
+    }
+
     /**
      * Compute status codes for a set of parallel branches.
-     * <p/>Note per {@link #computeChunkStatus(WorkflowRun, FlowNode, FlowChunk, FlowNode)} for in-progress builds with
+     * <p/>Note per {@link #computeChunkStatus(WorkflowRun, MemoryFlowChunk)} for in-progress builds with
      *     parallel branches, if the branch is done, it has its own status.
      * @param run Run containing these nodes
      * @param branchStarts The nodes starting off each parallel branch (BlockStartNode)
