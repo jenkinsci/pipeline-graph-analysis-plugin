@@ -179,6 +179,11 @@ public class StatusAndTiming {
         return (run.getResult() == Result.UNSTABLE) ? GenericStatus.UNSTABLE : GenericStatus.SUCCESS;
     }
 
+    @CheckForNull
+    public static TimingInfo computeChunkTiming(@Nonnull WorkflowRun run, long internalPauseDuration, @Nonnull MemoryFlowChunk chunk) {
+        return computeChunkTiming(run, internalPauseDuration, chunk.getNodeBefore(), chunk.getFirstNode(), chunk.getLastNode(), chunk.getNodeAfter());
+    }
+
     /**
      * Compute timing for a chunk of nodes
      * <p/> Note: for in-progress builds with parallel branches, the running branches end at the current time.
