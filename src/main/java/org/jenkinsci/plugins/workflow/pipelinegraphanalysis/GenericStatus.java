@@ -31,11 +31,6 @@ import hudson.model.Result;
  */
 public enum GenericStatus {
     /**
-     * Can't be determined for whatever reason, possibly in an undefined or transitory state
-     */
-    UNKNOWN,
-
-    /**
      * We resumed from checkpoint or {@link Result#NOT_BUILT} status - nothing ran in the chunk.
      */
     NOT_EXECUTED,
