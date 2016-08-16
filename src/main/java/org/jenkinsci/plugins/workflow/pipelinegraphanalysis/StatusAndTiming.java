@@ -181,7 +181,7 @@ public class StatusAndTiming {
 
     @CheckForNull
     public static TimingInfo computeChunkTiming(@Nonnull WorkflowRun run, long internalPauseDuration, @Nonnull MemoryFlowChunk chunk) {
-        return computeChunkTiming(run, internalPauseDuration, chunk.getNodeBefore(), chunk.getFirstNode(), chunk.getLastNode(), chunk.getNodeAfter());
+        return computeChunkTiming(run, internalPauseDuration, chunk.getFirstNode(), chunk.getLastNode(), chunk.getNodeAfter());
     }
 
     /**
@@ -190,7 +190,6 @@ public class StatusAndTiming {
      *      Completed branches use the time at which the {@link BlockEndNode} terminating the branch was created.
      * @param run WorkflowRun they all belong to
      * @param internalPauseDuration Millis paused in the chunk (including the ends)
-     * @param before Node before the chunk, if null assume this is the first piece of the flow and has nothing before
      * @param firstNode First node in the chunk
      * @param lastNode Last node in the chunk
      * @param after Node after the chunk, if null we assume this chunk is at the end of the flow
@@ -198,17 +197,16 @@ public class StatusAndTiming {
      */
     @CheckForNull
     public static TimingInfo computeChunkTiming(@Nonnull WorkflowRun run, long internalPauseDuration,
-                                        @CheckForNull FlowNode before, @Nonnull FlowNode firstNode,
+                                        @Nonnull FlowNode firstNode,
                                         @Nonnull FlowNode lastNode, @CheckForNull FlowNode after) {
         FlowExecution exec = run.getExecution();
         if (exec == null) {
             return null; // Haven't begun execution, or execution was hard-killed, timing is invalid
         }
         if (!NotExecutedNodeAction.isExecuted(lastNode)) {
-            return new TimingInfo(0,0);  // Nothing ran
+            return new TimingInfo(0,0,0);  // Nothing ran
         }
-        verifySameRun(run, before, firstNode, lastNode, after);
-        long startTime = TimingAction.getStartTime(firstNode);
+        verifySameRun(run, firstNode, lastNode, after);
         long endTime = (after != null) ? TimingAction.getStartTime(after) : System.currentTimeMillis();
 
         // Fudge
@@ -221,15 +219,13 @@ public class StatusAndTiming {
                 }
             }
         }
-
-        if (before == null) {
-            startTime = run.getStartTimeInMillis();
-        }
+        // What about null startTime???
+        long startTime = (firstNode instanceof FlowStartNode) ? run.getStartTimeInMillis() : TimingAction.getStartTime(firstNode);
         if (after == null && exec.isComplete()) {
             endTime = run.getDuration() + run.getStartTimeInMillis();
         }
 
-        return new TimingInfo((endTime-startTime), Math.min(Math.abs(internalPauseDuration), (endTime-startTime)));
+        return new TimingInfo((endTime-startTime), Math.min(Math.abs(internalPauseDuration), (endTime-startTime)), startTime);
     }
 
     /**
@@ -254,10 +250,11 @@ public class StatusAndTiming {
                 overallDuration = Math.max(overallDuration, t.getTotalDurationMillis());
             }
         }
+        long start = TimingAction.getStartTime(parallelStart);
         if (!isIncomplete) {
-            overallDuration = TimingAction.getStartTime(parallelEnd) - TimingAction.getStartTime(parallelStart);
+            overallDuration = TimingAction.getStartTime(parallelEnd) - start;
         }
-        return new TimingInfo(overallDuration, maxPause);
+        return new TimingInfo(overallDuration, maxPause, start);
     }
 
     /**
@@ -297,7 +294,7 @@ public class StatusAndTiming {
             }
             ThreadNameAction branchName = start.getAction(ThreadNameAction.class);
             assert branchName != null;
-            timings.put(branchName.getThreadName(), computeChunkTiming(run, pauseDurations[i], parallelStart, start, end, parallelEnd));
+            timings.put(branchName.getThreadName(), computeChunkTiming(run, pauseDurations[i], start, end, parallelEnd));
         }
         return timings;
     }

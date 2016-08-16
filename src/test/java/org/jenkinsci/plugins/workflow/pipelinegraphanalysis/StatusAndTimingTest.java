@@ -105,21 +105,22 @@ public class StatusAndTimingTest {
         // Test status handling with the first few nodes
         FlowNode[] n = getNodes(run.getExecution(), new int[]{2, 3, 4, 5, 6, 7});
         GenericStatus status = StatusAndTiming.computeChunkStatus(run, null, n[0], n[1], n[2]);
-        TimingInfo timing = StatusAndTiming.computeChunkTiming(run, 0, null, n[0], n[1], n[2]);
+        TimingInfo timing = StatusAndTiming.computeChunkTiming(run, 0, n[0], n[1], n[2]);
         Assert.assertEquals(GenericStatus.SUCCESS, status);
         Assert.assertEquals(0, timing.getPauseDurationMillis());
+        Assert.assertEquals(run.getStartTimeInMillis(), timing.getStartTimeMillis());
         Assert.assertEquals(TimingAction.getStartTime(n[2]) - run.getStartTimeInMillis(), timing.getTotalDurationMillis());
 
         // Everything but start/end
         status = StatusAndTiming.computeChunkStatus(run, n[0], n[1], n[4], n[5]);
-        timing = StatusAndTiming.computeChunkTiming(run, 2, n[0], n[1], n[4], n[5]);
+        timing = StatusAndTiming.computeChunkTiming(run, 2, n[1], n[4], n[5]);
         Assert.assertEquals(GenericStatus.SUCCESS, status);
         Assert.assertEquals(timing.getPauseDurationMillis(), 2);
         Assert.assertEquals(TimingAction.getStartTime(n[5]) - TimingAction.getStartTime(n[1]), timing.getTotalDurationMillis());
 
         // Whole flow
         status = StatusAndTiming.computeChunkStatus(run, null, n[0], n[5], null);
-        timing = StatusAndTiming.computeChunkTiming(run, 0, null, n[0], n[5], null);
+        timing = StatusAndTiming.computeChunkTiming(run, 0, n[0], n[5], null);
         Assert.assertEquals(GenericStatus.SUCCESS, status);
         Assert.assertEquals(0, timing.getPauseDurationMillis());
         Assert.assertEquals(run.getDuration(), timing.getTotalDurationMillis());
@@ -280,12 +281,14 @@ public class StatusAndTimingTest {
         Assert.assertEquals(50L, successTiming.getPauseDurationMillis());
         long successRunTime = doTiming(exec, 6, 13);
         Assert.assertEquals(successRunTime, successTiming.getTotalDurationMillis());
+        Assert.assertEquals(TimingAction.getStartTime(exec.getNode("6")), successTiming.getStartTimeMillis());
 
         // Failing branch time, 50 ms pause was a present above
         TimingInfo failTiming = branchTimings.get("fail");
         long failRunTime = doTiming(exec, 7, 13);
         Assert.assertEquals(Math.min(5L, failRunTime), failTiming.getPauseDurationMillis());
         Assert.assertEquals(failRunTime, failTiming.getTotalDurationMillis());
+        Assert.assertEquals(TimingAction.getStartTime(exec.getNode("7")), failTiming.getStartTimeMillis());
 
         // Check timing computation for overall result
         TimingInfo finalTiming = StatusAndTiming.computeOverallParallelTiming(
@@ -311,7 +314,7 @@ public class StatusAndTimingTest {
                 run, null, exec.getNode("2"), exec.getNode("6"), null));
         long currTime = System.currentTimeMillis();
         TimingInfo tim = StatusAndTiming.computeChunkTiming(
-                run, 0, null, exec.getNode("2"), exec.getNode("6"), null);
+                run, 0, exec.getNode("2"), exec.getNode("6"), null);
         Assert.assertEquals((double)(currTime-run.getStartTimeInMillis()), (double)(tim.getTotalDurationMillis()), 20.0);
         SemaphoreStep.success("wait/1", null);
     }
@@ -416,7 +419,7 @@ public class StatusAndTimingTest {
         GenericStatus status = StatusAndTiming.computeChunkStatus(run, null, e.getNode("2"), e.getNode("5"), null);
         Assert.assertEquals(GenericStatus.PAUSED_PENDING_INPUT, status);
         long currentTime = System.currentTimeMillis();
-        TimingInfo timing = StatusAndTiming.computeChunkTiming(run, 0L, null, e.getNode("2"), e.getNode("5"), null);
+        TimingInfo timing = StatusAndTiming.computeChunkTiming(run, 0L, e.getNode("2"), e.getNode("5"), null);
         long runTime = currentTime - run.getStartTimeInMillis();
         Assert.assertEquals((double) (runTime), (double) (timing.getTotalDurationMillis()), 10.0); // Approx b/c depends on when currentTime gathered
 
