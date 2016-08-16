@@ -24,16 +24,12 @@
 
 package org.jenkinsci.plugins.workflow.pipelinegraphanalysis;
 
-import com.cloudbees.workflow.flownode.FlowNodeUtil;
-import hudson.model.Action;
 import hudson.model.Result;
 import hudson.model.queue.QueueTaskFuture;
-import org.apache.commons.lang.StringUtils;
 import org.jenkinsci.plugins.workflow.actions.TimingAction;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowExecution;
 import org.jenkinsci.plugins.workflow.flow.FlowExecution;
-import org.jenkinsci.plugins.workflow.graph.BlockEndNode;
 import org.jenkinsci.plugins.workflow.graph.BlockStartNode;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
@@ -58,7 +54,7 @@ public class StatusAndTimingTest {
     public JenkinsRule j = new JenkinsRule();
 
     // Helper
-    FlowNode[] getNodes(FlowExecution exec, int[] ids) throws IOException {
+    static FlowNode[] getNodes(FlowExecution exec, int[] ids) throws IOException {
         FlowNode[] output = new FlowNode[ids.length];
         for (int i=0; i < ids.length; i++) {
             output[i] = exec.getNode(Integer.toString(ids[i]));
@@ -67,7 +63,7 @@ public class StatusAndTimingTest {
     }
 
     // Helper
-    public long doTiming(FlowExecution exec, int firstNodeId, int nodeAfterEndId) throws  IOException {
+    static public long doTiming(FlowExecution exec, int firstNodeId, int nodeAfterEndId) throws  IOException {
         long startTime = TimingAction.getStartTime(exec.getNode(Integer.toString(firstNodeId)));
         long endTime = TimingAction.getStartTime(exec.getNode(Integer.toString(nodeAfterEndId)));
         return endTime-startTime;
@@ -426,42 +422,5 @@ public class StatusAndTimingTest {
         FlowExecution exec = run.getExecution();
         status = StatusAndTiming.computeChunkStatus(run, null, exec.getNode("2"), exec.getNode("6"), null);
         Assert.assertEquals(GenericStatus.ABORTED, status);
-    }
-
-    /** Helper, prints flow graph in some detail */
-    public void printNodes(FlowExecution exec, long startTime, boolean showTiming, boolean showActions) {
-        List<FlowNode> sorted = FlowNodeUtil.getIdSortedExecutionNodeList(exec);
-        System.out.println("Node dump follows, format:");
-        System.out.println("[ID]{parent,ids}(millisSinceStartOfRun) flowNodeClassName stepDisplayName [st=startId if a block node]");
-        System.out.println("Action format: ");
-        System.out.println("\t- actionClassName actionDisplayName");
-        System.out.println("------------------------------------------------------------------------------------------");
-        for (FlowNode node : sorted) {
-            StringBuilder formatted = new StringBuilder();
-            formatted.append('[').append(node.getId()).append(']');
-            formatted.append('{').append(StringUtils.join(node.getParentIds(), ',')).append('}');
-            if (showTiming) {
-                formatted.append('(');
-                if (node.getAction(TimingAction.class) != null) {
-                    formatted.append(TimingAction.getStartTime(node)-startTime);
-                } else {
-                    formatted.append("N/A");
-                }
-                formatted.append(')');
-            }
-            formatted.append(node.getClass().getSimpleName()).append(' ').append(node.getDisplayName());
-            if (node instanceof BlockEndNode) {
-                formatted.append("  [st=").append(((BlockEndNode)node).getStartNode().getId()).append(']');
-            }
-            if (showActions) {
-                for (Action a : node.getActions()) {
-                    if (!(a instanceof TimingAction)) {
-                        formatted.append("\n  -").append(a.getClass().getSimpleName()).append(' ').append(a.getDisplayName());
-                    }
-                }
-            }
-            System.out.println(formatted);
-        }
-        System.out.println("------------------------------------------------------------------------------------------");
     }
 }
