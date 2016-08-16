@@ -22,6 +22,22 @@ import java.util.ArrayList;
  */
 public class StageTest {
 
+    @Rule
+    public JenkinsRule jenkinsRule = new JenkinsRule();
+
+    public static class CollectingChunkVisitor extends StandardChunkVisitor {
+        ArrayDeque<MemoryFlowChunk> allChunks = new ArrayDeque<MemoryFlowChunk>();
+
+        public ArrayList<MemoryFlowChunk> getChunks() {
+            return new ArrayList<MemoryFlowChunk>(allChunks);
+        }
+
+        protected void handleChunkDone(@Nonnull MemoryFlowChunk chunk) {
+            allChunks.push(chunk);
+            this.chunk = new MemoryFlowChunk();
+        }
+    }
+
     /** Assert that chunk flownode IDs match expected, use 0 or -1 ID for null flownode */
     public static void assertChunkBoundary(FlowChunkWithContext chunk, int beforeId, int firstId, int lastId, int afterId) {
         // First check the chunk boundaries, then the before/after
@@ -46,22 +62,6 @@ public class StageTest {
 
     }
 
-    @Rule
-    public JenkinsRule jenkinsRule = new JenkinsRule();
-
-    public static class CollectingChunkVisitor extends StandardChunkVisitor {
-        ArrayDeque<MemoryFlowChunk> allChunks = new ArrayDeque<MemoryFlowChunk>();
-
-        public ArrayList<MemoryFlowChunk> getChunks() {
-            return new ArrayList<MemoryFlowChunk>(allChunks);
-        }
-
-        protected void handleChunkDone(@Nonnull MemoryFlowChunk chunk) {
-            allChunks.push(chunk);
-            this.chunk = new MemoryFlowChunk();
-        }
-    }
-
     @Test
     public void testBlockStage() throws Exception {
         WorkflowJob job = jenkinsRule.jenkins.createProject(WorkflowJob.class, "Blocky job");
@@ -75,10 +75,8 @@ public class StageTest {
                 "     echo ('Testing'); " +
                 "   } \n" +
                 "   stage ('Deploy') { " +
-                (hudson.Functions.isWindows() ? "   bat ('rmdir /s/q targs || echo no such dir\\n mkdir targs && echo hello> targs\\\\hello.txt'); "
-                        : "   sh ('rm -rf targs && mkdir targs && echo hello > targs/hello.txt'); "
-                ) +
-                "     archive(includes: 'targs/hello.txt'); " +
+                "     writeFile file: 'file.txt', text:'content'; " +
+                "     archive(includes: 'file.txt'); " +
                 "     echo ('Deploying'); " +
                 "   } \n" +
                 "}"));
@@ -116,8 +114,7 @@ public class StageTest {
          [16]{15}StepStartNode Deploy
            -BodyInvocationAction null
            -LabelAction Deploy
-         [17]{16}StepAtomNode Shell Script
-           -LogActionImpl Console Output
+         [17]{16}StepAtomNode Write file to workspace
          [18]{17}StepAtomNode Archive artifacts
            -LogActionImpl Console Output
          [19]{18}StepAtomNode Print Message
@@ -237,10 +234,8 @@ public class StageTest {
                 "   stage ('Test'); " +
                 "   echo ('Testing'); " +
                 "   stage ('Deploy'); " +
-                (hudson.Functions.isWindows() ? "   bat ('rmdir /s/q targs || echo no such dir\\n mkdir targs && echo hello> targs\\\\hello.txt'); "
-                        : "   sh ('rm -rf targs && mkdir targs && echo hello > targs/hello.txt'); "
-                ) +
-                "   archive(includes: 'targs/hello.txt'); " +
+                "     writeFile file: 'file.txt', text:'content'; " +
+                "     archive(includes: 'file.txt'); " +
                 "   echo ('Deploying'); " +
                 "}"));
         /**
@@ -271,8 +266,7 @@ public class StageTest {
            -LogActionImpl Console Output
            -LabelAction Deploy
            -StageActionImpl null
-         [10]{9}StepAtomNode Shell Script
-           -LogActionImpl Console Output
+         [10]{9}StepAtomNode Write file to workspace
          [11]{10}StepAtomNode Archive artifacts
            -LogActionImpl Console Output
          [12]{11}StepAtomNode Print Message

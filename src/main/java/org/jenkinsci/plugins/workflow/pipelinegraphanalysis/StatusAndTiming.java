@@ -56,6 +56,8 @@ import java.util.Map;
 
 import org.jenkinsci.plugins.workflow.graph.FlowStartNode;
 import org.jenkinsci.plugins.workflow.graph.FlowEndNode;
+import org.kohsuke.accmod.Restricted;
+import org.kohsuke.accmod.restrictions.DoNotUse;
 
 /**
  * Provides common, comprehensive set of APIs for doing status and timing computations on pieces of a pipeline execution.
@@ -372,8 +374,15 @@ public class StatusAndTiming {
         return Collections.max(statuses);
     }
 
+
     /** Helper, prints flow graph in some detail - now a common utility so others don't have to reinvent it */
-    public static void printNodes(@Nonnull FlowExecution exec, long startTime, boolean showTiming, boolean showActions) {
+    @Restricted(DoNotUse.class)
+    public static void printNodes(@Nonnull WorkflowRun run, boolean showTiming, boolean showActions) {
+        long runStartTime = run.getStartTimeInMillis();
+        FlowExecution exec = run.getExecution();
+        if (exec == null) {
+            return;
+        }
         DepthFirstScanner scanner = new DepthFirstScanner();
         List<FlowNode> sorted = scanner.filteredNodes(exec.getCurrentHeads(), (Predicate) Predicates.alwaysTrue());
         Collections.sort(sorted, new Comparator<FlowNode>() {
@@ -399,7 +408,7 @@ public class StatusAndTiming {
             }
         });
         System.out.println("Node dump follows, format:");
-        System.out.println("[ID]{parent,ids}(millisSinceStartOfRun) flowNodeClassName stepDisplayName [st=startId if a block node]");
+        System.out.println("[ID]{parent,ids}(millisSinceStartOfRun) flowNodeClassName stepDisplayName [st=startId if a block end node]");
         System.out.println("Action format: ");
         System.out.println("\t- actionClassName actionDisplayName");
         System.out.println("------------------------------------------------------------------------------------------");
@@ -410,7 +419,7 @@ public class StatusAndTiming {
             if (showTiming) {
                 formatted.append('(');
                 if (node.getAction(TimingAction.class) != null) {
-                    formatted.append(TimingAction.getStartTime(node)-startTime);
+                    formatted.append(TimingAction.getStartTime(node)-runStartTime);
                 } else {
                     formatted.append("N/A");
                 }
