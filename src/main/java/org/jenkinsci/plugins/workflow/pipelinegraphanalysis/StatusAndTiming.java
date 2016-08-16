@@ -24,7 +24,11 @@
 
 package org.jenkinsci.plugins.workflow.pipelinegraphanalysis;
 
+import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
+import hudson.model.Action;
 import hudson.model.Result;
+import org.apache.commons.lang.StringUtils;
 import org.jenkinsci.plugins.workflow.actions.ErrorAction;
 import org.jenkinsci.plugins.workflow.actions.NotExecutedNodeAction;
 import org.jenkinsci.plugins.workflow.actions.ThreadNameAction;
@@ -33,6 +37,7 @@ import org.jenkinsci.plugins.workflow.flow.FlowExecution;
 import org.jenkinsci.plugins.workflow.graph.BlockEndNode;
 import org.jenkinsci.plugins.workflow.graph.BlockStartNode;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
+import org.jenkinsci.plugins.workflow.graphanalysis.DepthFirstScanner;
 import org.jenkinsci.plugins.workflow.graphanalysis.MemoryFlowChunk;
 import org.jenkinsci.plugins.workflow.graphanalysis.ParallelMemoryFlowChunk;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
@@ -44,6 +49,7 @@ import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -364,5 +370,65 @@ public class StatusAndTiming {
             return null;
         }
         return Collections.max(statuses);
+    }
+
+    /** Helper, prints flow graph in some detail - now a common utility so others don't have to reinvent it */
+    public static void printNodes(@Nonnull FlowExecution exec, long startTime, boolean showTiming, boolean showActions) {
+        DepthFirstScanner scanner = new DepthFirstScanner();
+        List<FlowNode> sorted = scanner.filteredNodes(exec.getCurrentHeads(), (Predicate) Predicates.alwaysTrue());
+        Collections.sort(sorted, new Comparator<FlowNode>() {
+            @Override
+            public int compare(FlowNode node1, FlowNode node2) {
+                int node1Iota = parseIota(node1);
+                int node2Iota = parseIota(node2);
+
+                if (node1Iota < node2Iota) {
+                    return -1;
+                } else if (node1Iota > node2Iota) {
+                    return 1;
+                }
+                return 0;
+            }
+
+            private int parseIota(FlowNode node) {
+                try {
+                    return Integer.parseInt(node.getId());
+                } catch (NumberFormatException e) {
+                    return 0;
+                }
+            }
+        });
+        System.out.println("Node dump follows, format:");
+        System.out.println("[ID]{parent,ids}(millisSinceStartOfRun) flowNodeClassName stepDisplayName [st=startId if a block node]");
+        System.out.println("Action format: ");
+        System.out.println("\t- actionClassName actionDisplayName");
+        System.out.println("------------------------------------------------------------------------------------------");
+        for (FlowNode node : sorted) {
+            StringBuilder formatted = new StringBuilder();
+            formatted.append('[').append(node.getId()).append(']');
+            formatted.append('{').append(StringUtils.join(node.getParentIds(), ',')).append('}');
+            if (showTiming) {
+                formatted.append('(');
+                if (node.getAction(TimingAction.class) != null) {
+                    formatted.append(TimingAction.getStartTime(node)-startTime);
+                } else {
+                    formatted.append("N/A");
+                }
+                formatted.append(')');
+            }
+            formatted.append(node.getClass().getSimpleName()).append(' ').append(node.getDisplayName());
+            if (node instanceof BlockEndNode) {
+                formatted.append("  [st=").append(((BlockEndNode)node).getStartNode().getId()).append(']');
+            }
+            if (showActions) {
+                for (Action a : node.getActions()) {
+                    if (!(a instanceof TimingAction)) {
+                        formatted.append("\n  -").append(a.getClass().getSimpleName()).append(' ').append(a.getDisplayName());
+                    }
+                }
+            }
+            System.out.println(formatted);
+        }
+        System.out.println("------------------------------------------------------------------------------------------");
     }
 }
