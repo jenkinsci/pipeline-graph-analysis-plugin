@@ -22,8 +22,7 @@ public class StageChunkFinder implements ChunkFinder {
 
     @Override
     public boolean isChunkStart(@Nonnull FlowNode current, @CheckForNull FlowNode previous) {
-        LabelAction label = current.getAction(LabelAction.class);
-        return label != null && !(label instanceof ThreadNameAction);
+        return current.getAction(LabelAction.class) != null && current.getAction(ThreadNameAction.class) == null;
     }
 
     /** End is where you have a label marker before it... or  */
@@ -36,8 +35,7 @@ public class StageChunkFinder implements ChunkFinder {
         }
         // Then a marker-scoped stage
         if (previous != null) {
-            LabelAction label = previous.getAction(LabelAction.class);
-            return label != null && !(label instanceof ThreadNameAction);
+            return previous.getAction(LabelAction.class) != null && previous.getAction(ThreadNameAction.class) == null;
         }
         return false;
     }
