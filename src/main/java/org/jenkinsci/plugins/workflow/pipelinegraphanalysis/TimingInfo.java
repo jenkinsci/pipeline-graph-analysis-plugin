@@ -26,12 +26,18 @@ package org.jenkinsci.plugins.workflow.pipelinegraphanalysis;
 
 /** Container object for timing info about piece of a flow */
 public class TimingInfo {
-    private long totalDurationMillis;
-    private long pauseDurationMillis;
+    private long totalDurationMillis = 0;
+    private long pauseDurationMillis = 0;
+    private long startTimeMillis = 0;
 
-    public TimingInfo(long totalDurationMillis, long pauseDurationMillis) {
+    public TimingInfo(long totalDurationMillis, long pauseDurationMillis, long startTimeMillis) {
         this.totalDurationMillis = totalDurationMillis;
         this.pauseDurationMillis = pauseDurationMillis;
+        this.startTimeMillis = startTimeMillis;
+    }
+
+    public TimingInfo(){
+        // Basic constructor
     }
 
     public long getTotalDurationMillis() {
@@ -48,5 +54,13 @@ public class TimingInfo {
 
     public void setPauseDurationMillis(long pauseDurationMillis) {
         this.pauseDurationMillis = pauseDurationMillis;
+    }
+
+    public long getStartTimeMillis() {
+        return startTimeMillis;
+    }
+
+    public void setStartTimeMillis(long startTimeMillis) {
+        this.startTimeMillis = startTimeMillis;
     }
 }
