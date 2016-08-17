@@ -18,7 +18,7 @@ import java.util.ArrayList;
 
 /**
  * Tests the stage collection
- * @author <samvanoort@gmail.com>Sam Van Oort</samvanoort@gmail.com>
+ * @author Sam Van Oort
  */
 public class StageTest {
 

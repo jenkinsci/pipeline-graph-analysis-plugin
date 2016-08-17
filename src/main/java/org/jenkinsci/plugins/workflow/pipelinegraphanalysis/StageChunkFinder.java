@@ -12,7 +12,7 @@ import javax.annotation.Nonnull;
 
 /**
  * Finds both block-scoped and legacy stages
- * @author <samvanoort@gmail.com>Sam Van Oort</samvanoort@gmail.com>
+ * @author Sam Van Oort
  */
 public class StageChunkFinder implements ChunkFinder {
 

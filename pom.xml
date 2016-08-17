@@ -11,7 +11,7 @@
 
     <groupId>org.jenkins-ci.plugins</groupId>
     <artifactId>pipeline-graph-analysis</artifactId>
-    <version>0.1-bss2-SNAPSHOT</version>
+    <version>0.1-beta-1-SNAPSHOT</version>
     <packaging>hpi</packaging>
     <name>Pipeline Graph Analysis Plugin</name>
     <!--<url>https://wiki.jenkins-ci.org/display/JENKINS/Pipeline+Graph+Analysis+Plugin</url>-->
@@ -52,7 +52,7 @@
         <dependency>
             <groupId>org.jenkins-ci.plugins.workflow</groupId>
             <artifactId>workflow-api</artifactId>
-            <version>2.2.blockapis-SNAPSHOT</version> <!-- allows consuming the new APIs -->
+            <version>2.2-beta-1</version> <!-- allows consuming the new APIs -->
         </dependency>
         <dependency>
             <groupId>org.jenkins-ci.plugins</groupId>
@@ -87,7 +87,7 @@
             <!-- Block-scoped stage support -->
             <groupId>org.jenkins-ci.plugins</groupId>
             <artifactId>pipeline-stage-step</artifactId>
-            <version>2.2-blockscoped-SNAPSHOT</version>
+            <version>2.2-beta-1</version>
         </dependency>
         <dependency>
             <groupId>org.jenkins-ci.plugins.workflow</groupId>
