@@ -11,7 +11,7 @@
 
     <groupId>org.jenkins-ci.plugins</groupId>
     <artifactId>pipeline-graph-analysis</artifactId>
-    <version>0.1-beta-3-SNAPSHOT</version>
+    <version>1.1-SNAPSHOT</version>
     <packaging>hpi</packaging>
     <name>Pipeline Graph Analysis Plugin</name>
     <!--<url>https://wiki.jenkins-ci.org/display/JENKINS/Pipeline+Graph+Analysis+Plugin</url>-->
@@ -52,13 +52,12 @@
         <dependency>
             <groupId>org.jenkins-ci.plugins.workflow</groupId>
             <artifactId>workflow-api</artifactId>
-            <version>2.2-beta-2</version> <!-- allows consuming the new APIs -->
+            <version>2.2</version> <!-- allows consuming the new APIs -->
         </dependency>
         <dependency>
             <groupId>org.jenkins-ci.plugins</groupId>
             <artifactId>pipeline-input-step</artifactId>
             <version>2.0</version>
-            <optional>true</optional>
         </dependency>
         <dependency>
             <!-- For block-scoped stage support, input step handling -->
@@ -107,42 +106,6 @@
             <artifactId>workflow-durable-task-step</artifactId>
             <version>${workflow.version}</version>
             <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.jenkins-ci.plugins.pipeline-stage-view</groupId>
-            <artifactId>pipeline-rest-api</artifactId>
-            <version>1.6</version>
-            <scope>test</scope>
-        </dependency>
-
-        <!-- May be able to remove these due to core -->
-        <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-annotations</artifactId>
-            <version>${jackson.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-core</artifactId>
-            <version>${jackson.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-databind</artifactId>
-            <version>${jackson.version}</version>
-        </dependency>
-
-        <dependency>
-            <groupId>org.mockito</groupId>
-            <artifactId>mockito-core</artifactId>
-            <version>1.9.5</version>
-            <scope>test</scope>
-            <exclusions>
-                <exclusion>
-                    <groupId>org.hamcrest</groupId>
-                    <artifactId>hamcrest-core</artifactId>
-                </exclusion>
-            </exclusions>
         </dependency>
     </dependencies>
 </project>
