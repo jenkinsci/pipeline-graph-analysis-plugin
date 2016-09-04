@@ -1,8 +1,12 @@
 package org.jenkinsci.plugins.workflow.pipelinegraphanalysis;
 
 import org.jenkinsci.plugins.workflow.actions.LabelAction;
-import org.jenkinsci.plugins.workflow.actions.ThreadNameAction;
+import org.jenkinsci.plugins.workflow.actions.StageAction;
+import org.jenkinsci.plugins.workflow.cps.nodes.StepAtomNode;
 import org.jenkinsci.plugins.workflow.cps.nodes.StepEndNode;
+import org.jenkinsci.plugins.workflow.cps.nodes.StepNode;
+import org.jenkinsci.plugins.workflow.cps.nodes.StepStartNode;
+import org.jenkinsci.plugins.workflow.graph.BlockEndNode;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 import org.jenkinsci.plugins.workflow.graphanalysis.ChunkFinder;
 import org.jenkinsci.plugins.workflow.support.steps.StageStep;
@@ -22,7 +26,19 @@ public class StageChunkFinder implements ChunkFinder {
 
     @Override
     public boolean isChunkStart(@Nonnull FlowNode current, @CheckForNull FlowNode previous) {
-        return current.getAction(LabelAction.class) != null && current.getAction(ThreadNameAction.class) == null;
+        if ((current instanceof StepAtomNode || current instanceof StepStartNode) && !((((StepNode) current).getDescriptor()) instanceof StageStep.DescriptorImpl)) {
+            // Faster than looking at actions
+            return false;
+        } else if (current instanceof BlockEndNode) {
+            return false;
+        } else if (current instanceof StepStartNode) {
+            StepStartNode startNode = (StepStartNode)current;
+            if (!(startNode.getDescriptor() instanceof StageStep.DescriptorImpl)) {
+                return false;
+            }
+            return startNode.getAction(LabelAction.class) != null;
+        }
+        return current.getAction(StageAction.class) != null;
     }
 
     /** End is where you have a label marker before it... or  */
@@ -35,7 +51,7 @@ public class StageChunkFinder implements ChunkFinder {
         }
         // Then a marker-scoped stage
         if (previous != null) {
-            return previous.getAction(LabelAction.class) != null && previous.getAction(ThreadNameAction.class) == null;
+            return isChunkStart(previous, null);
         }
         return false;
     }
