@@ -46,4 +46,6 @@ public abstract class GraphAnalysisMetric <MetricDataType> {
      *  TODO attach to descriptor
      */
     public abstract MetricDataType extractValue(FlowChunkWithContext chunk);
+
+    // TODO perhaps we need some method for updating metrics node by node?
 }

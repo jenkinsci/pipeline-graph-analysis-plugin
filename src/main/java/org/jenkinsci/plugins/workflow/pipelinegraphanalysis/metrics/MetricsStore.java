@@ -19,4 +19,10 @@ public class MetricsStore <MetricType> {
     public void clear() {
         store.clear();
     }
+
+    public MetricsStore<MetricType> copy() {
+        MetricsStore<MetricType> output = new MetricsStore<MetricType>();
+        output.store = (HashMap<String, MetricType>)store.clone();
+        return output;
+    }
 }
