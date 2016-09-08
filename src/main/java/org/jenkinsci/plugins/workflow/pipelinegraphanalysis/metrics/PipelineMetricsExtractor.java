@@ -1,7 +1,5 @@
 package org.jenkinsci.plugins.workflow.pipelinegraphanalysis.metrics;
 
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import org.jenkinsci.plugins.workflow.graphanalysis.ChunkFinder;
 import org.jenkinsci.plugins.workflow.graphanalysis.ForkScanner;
 import org.jenkinsci.plugins.workflow.graphanalysis.SimpleChunkVisitor;

@@ -14,10 +14,10 @@ import java.util.Collection;
  */
 public abstract class GraphAnalysisMetric <MetricDataType> {
 
-    /** How to combine parallel values */
+    /** How to combine parallel values, i.e. between branches of a parallel block */
     public abstract MetricDataType combineParallel(Collection<MetricDataType> values);
 
-    /** How to combine serial values */
+    /** How to combine serial values, i.e. a sequence of chunks*/
     public abstract MetricDataType combineSerial(Collection<MetricDataType> values);
 
     /** What am I called?
