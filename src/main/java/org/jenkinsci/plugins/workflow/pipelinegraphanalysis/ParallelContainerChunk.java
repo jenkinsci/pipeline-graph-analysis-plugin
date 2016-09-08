@@ -26,7 +26,7 @@ public class ParallelContainerChunk extends MemoryFlowChunk implements Container
 
     @Override
     public void addChildChunkToStart(@Nonnull ContainerChunk chunk) {
-        branches.add(chunk);
+        branches.addFirst(chunk);
     }
 
     @Override
