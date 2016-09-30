@@ -62,8 +62,8 @@ import org.kohsuke.accmod.restrictions.DoNotUse;
 /**
  * Provides common, comprehensive set of APIs for doing status and timing computations on pieces of a pipeline execution.
  *
- * <p/> <strong>Concepts:</strong> a chunk, which is a set of {@link FlowNode}s in the same {@link FlowExecution} with a first and last node.
- * <p/> Chunks exist in a context: the FlowNode before and the FlowNode after.  These follow common-sense rules:
+ * <p> <strong>Concepts:</strong> a chunk, which is a set of {@link FlowNode}s in the same {@link FlowExecution} with a first and last node. </p>
+ * <p> Chunks exist in a context: the FlowNode before and the FlowNode after.  These follow common-sense rules: </p>
  * <ol>
  *     <li>If a chunk has a null before node, then its first node must be the {@link FlowStartNode} for that execution</li>
  *     <li>If a chunk has a null after node, then its last node must be the {@link FlowEndNode} for that execution</li>
@@ -71,17 +71,17 @@ import org.kohsuke.accmod.restrictions.DoNotUse;
  *     <li>First nodes must always occur before last nodes</li>
  *     <li>Where a {@link WorkflowRun} is a parameter, it and the FlowNodes must all belong to the same execution</li>
  * </ol>
- * <p/> <strong>Parallel branch handling:</strong>
+ * <p> <strong>Parallel branch handling:</strong> </p>
  * <ol>
- *     <ul>Each branch is considered independent</ul>
- *     <ul>Branches may succeed, fail, or be in-progress/waiting for input.</ul>
+ *     <li>Each branch is considered independent</li>
+ *     <li>Branches may succeed, fail, or be in-progress/waiting for input.</li>
  * </ol>
  * @author Sam Van Oort
  */
 public class StatusAndTiming {
 
     /**
-     * Check that all the flownodes & run describe the same pipeline run/execution
+     * Check that all the flownodes &amp; run describe the same pipeline run/execution
      * @param run Run that nodes must belong to
      * @param nodes Nodes to match to run
      * @throws IllegalArgumentException For the first flownode that doesn't belong to the FlowExectuon of run
@@ -100,7 +100,11 @@ public class StatusAndTiming {
         }
     }
 
-    /** Return true if the run is paused on input */
+    /**
+     * Return true if the run is paused on input
+     * @param run
+     * @return
+     */
     public static boolean isPendingInput(WorkflowRun run) {
         // Logic borrowed from Pipeline Stage View plugin, RuneEx
         InputAction inputAction = run.getAction(InputAction.class);
@@ -113,7 +117,12 @@ public class StatusAndTiming {
         return false;
     }
 
-    /** Return status or null if not executed all (null FlowExecution) */
+    /**
+     * Return status or null if not executed all (null FlowExecution)
+     * @param run
+     * @param chunk
+     * @return Status or null if not executed all (null FlowExecution)
+     */
     @CheckForNull
     public static GenericStatus computeChunkStatus(@Nonnull WorkflowRun run, @Nonnull MemoryFlowChunk chunk) {
         FlowExecution exec = run.getExecution();
@@ -130,8 +139,8 @@ public class StatusAndTiming {
 
     /**
      * Compute the overall status for a chunk comprising firstNode through lastNode, inclusive
-     * <p/> All nodes must be in the same execution
-     * <p/> Note: for in-progress builds with parallel branches, if the branch is done, it has its own status.
+     * <p> All nodes must be in the same execution </p>
+     * <p> Note: for in-progress builds with parallel branches, if the branch is done, it has its own status. </p>
      * @param run Run that nodes belong to
      * @param before Node before the first node in this piece
      * @param firstNode First node of this piece
@@ -194,8 +203,8 @@ public class StatusAndTiming {
 
     /**
      * Compute timing for a chunk of nodes
-     * <p/> Note: for in-progress builds with parallel branches, the running branches end at the current time.
-     *      Completed branches use the time at which the {@link BlockEndNode} terminating the branch was created.
+     * <p> Note: for in-progress builds with parallel branches, the running branches end at the current time.
+     *      Completed branches use the time at which the {@link BlockEndNode} terminating the branch was created. </p>
      * @param run WorkflowRun they all belong to
      * @param internalPauseDuration Millis paused in the chunk (including the ends)
      * @param firstNode First node in the chunk
@@ -323,8 +332,8 @@ public class StatusAndTiming {
 
     /**
      * Compute status codes for a set of parallel branches.
-     * <p/>Note per {@link #computeChunkStatus(WorkflowRun, MemoryFlowChunk)} for in-progress builds with
-     *     parallel branches, if the branch is done, it has its own status.
+     * <p> Note per {@link #computeChunkStatus(WorkflowRun, MemoryFlowChunk)} for in-progress builds with
+     *     parallel branches, if the branch is done, it has its own status. </p>
      * @param run Run containing these nodes
      * @param branchStarts The nodes starting off each parallel branch (BlockStartNode)
      * @param branchEnds Last node in each parallel branch - might be the end of the branch, or might just be the latest step run
@@ -360,7 +369,9 @@ public class StatusAndTiming {
         return statusMappings;
     }
 
-    /** Combines the status results from a list of parallel branches to report a single overall status
+    /**
+     * Combines the status results from a list of parallel branches to report a single overall status
+     * @param statuses
      * @return Status, or null if none can be defined
      */
     @CheckForNull
@@ -372,7 +383,12 @@ public class StatusAndTiming {
     }
 
 
-    /** Helper, prints flow graph in some detail - now a common utility so others don't have to reinvent it */
+    /**
+     * Helper, prints flow graph in some detail - now a common utility so others don't have to reinvent it
+     * @param run
+     * @param showTiming
+     * @param showActions
+     */
     @Restricted(DoNotUse.class)
     public static void printNodes(@Nonnull WorkflowRun run, boolean showTiming, boolean showActions) {
         long runStartTime = run.getStartTimeInMillis();
