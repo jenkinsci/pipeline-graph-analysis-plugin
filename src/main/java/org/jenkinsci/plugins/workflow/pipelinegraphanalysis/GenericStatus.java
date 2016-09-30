@@ -36,7 +36,7 @@ public enum GenericStatus {
     NOT_EXECUTED,
 
     /**
-     * Completed & successful, ex {@link Result#SUCCESS}
+     * Completed &amp; successful, ex {@link Result#SUCCESS}
      */
     SUCCESS,
 
