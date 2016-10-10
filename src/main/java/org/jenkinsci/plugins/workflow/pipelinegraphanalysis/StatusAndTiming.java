@@ -107,7 +107,7 @@ public class StatusAndTiming {
      */
     public static boolean isPendingInput(WorkflowRun run) {
         // Logic borrowed from Pipeline Stage View plugin, RuneEx
-        InputAction inputAction = run.getAction(InputAction.class);
+        InputAction inputAction = run.getDirectAction(InputAction.class);
         if (inputAction != null) {
             List<InputStepExecution> executions = inputAction.getExecutions();
             if (executions != null && !executions.isEmpty()) {
@@ -165,7 +165,7 @@ public class StatusAndTiming {
             if (run.isBuilding()) {
                 if (exec.getCurrentHeads().size() > 1 && lastNode instanceof BlockEndNode) {  // Check to see if all the action is on other branches
                     BlockStartNode start = ((BlockEndNode)lastNode).getStartNode();
-                    if (start.getAction(ThreadNameAction.class) != null) {
+                    if (start.getDirectAction(ThreadNameAction.class) != null) {
                         return (lastNode.getError() == null) ? GenericStatus.SUCCESS : GenericStatus.FAILURE;
                     }
                 }
@@ -231,7 +231,7 @@ public class StatusAndTiming {
         if (isLastChunk && run.isBuilding()) {
             if (exec.getCurrentHeads().size() > 1 && lastNode instanceof BlockEndNode) {  // Check to see if all the action is on other branches
                 BlockStartNode start = ((BlockEndNode)lastNode).getStartNode();
-                if (start.getAction(ThreadNameAction.class) != null) {
+                if (start.getDirectAction(ThreadNameAction.class) != null) {
                     endTime = TimingAction.getStartTime(lastNode);  // Completed parallel branch, use the block end time
                 }
             }
@@ -309,7 +309,7 @@ public class StatusAndTiming {
                         + start.getId()+','
                         + end.getId());
             }
-            ThreadNameAction branchName = start.getAction(ThreadNameAction.class);
+            ThreadNameAction branchName = start.getDirectAction(ThreadNameAction.class);
             assert branchName != null;
             timings.put(branchName.getThreadName(), computeChunkTiming(run, pauseDurations[i], start, end, parallelEnd));
         }
@@ -362,7 +362,7 @@ public class StatusAndTiming {
                         + start.getId()+','
                         + end.getId());
             }
-            ThreadNameAction branchName = start.getAction(ThreadNameAction.class);
+            ThreadNameAction branchName = start.getDirectAction(ThreadNameAction.class);
             assert branchName != null;
             statusMappings.put(branchName.getThreadName(), computeChunkStatus(run, parallelStart, start, end, parallelEnd));
         }
@@ -431,7 +431,7 @@ public class StatusAndTiming {
             formatted.append('{').append(StringUtils.join(node.getParentIds(), ',')).append('}');
             if (showTiming) {
                 formatted.append('(');
-                if (node.getAction(TimingAction.class) != null) {
+                if (node.getDirectAction(TimingAction.class) != null) {
                     formatted.append(TimingAction.getStartTime(node)-runStartTime);
                 } else {
                     formatted.append("N/A");
