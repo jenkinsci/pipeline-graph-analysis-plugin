@@ -107,7 +107,7 @@ public class StatusAndTiming {
      */
     public static boolean isPendingInput(WorkflowRun run) {
         // Logic borrowed from Pipeline Stage View plugin, RuneEx
-        InputAction inputAction = run.getDirectAction(InputAction.class);
+        InputAction inputAction = run.getAction(InputAction.class);
         if (inputAction != null) {
             List<InputStepExecution> executions = inputAction.getExecutions();
             if (executions != null && !executions.isEmpty()) {
