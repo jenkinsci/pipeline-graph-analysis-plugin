@@ -26,6 +26,7 @@ package org.jenkinsci.plugins.workflow.pipelinegraphanalysis;
 
 import hudson.model.Result;
 import hudson.model.queue.QueueTaskFuture;
+import org.apache.commons.lang.SystemUtils;
 import org.jenkinsci.plugins.workflow.actions.TimingAction;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowExecution;
@@ -430,15 +431,18 @@ public class StatusAndTimingTest {
     @Test
     public void busyStepTest() throws Exception {
         WorkflowJob job = j.jenkins.createProject(WorkflowJob.class, "InputJob");
+        String sleep = "sh 'sleep 10000'\n";
+        if(SystemUtils.IS_OS_WINDOWS){
+            sleep = "bat 'timeout /t 30'\n";
+        }
         job.setDefinition(new CpsFlowDefinition("node {\n" +
                 "    stage(\"parallelStage\"){\n" +
                 "      parallel left : {\n" +
                 "            echo \"running\"\n" +
-                "            def branchInput = input message: 'Please input branch to test against', parameters: [[$class: 'StringParameterDefinition', defaultValue: 'master', description: '', name: 'branch']]\n" +
-                "            echo \"BRANCH NAME: ${branchInput}\"\n" +
+                "            input message: 'Please input branch to test against' \n" +
                 "        }, \n" +
                 "        right : {\n" +
-                "            sh 'sleep 10000'\n" + //13
+                sleep + //13
                 "        }\n" +
                 "    }\n" +
                 "}"));
@@ -449,7 +453,6 @@ public class StatusAndTimingTest {
             e.waitForSuspension();
         }
         e = (CpsFlowExecution)(run.getExecution());
-        StatusAndTiming.printNodes(run, false, false);
         GenericStatus status = StatusAndTiming.computeChunkStatus(run, null, e.getNode("13"), e.getNode("13"), null);
         Assert.assertEquals(GenericStatus.IN_PROGRESS, status);
 
