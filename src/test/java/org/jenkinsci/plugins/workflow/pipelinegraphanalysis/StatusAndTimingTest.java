@@ -426,4 +426,35 @@ public class StatusAndTimingTest {
         status = StatusAndTiming.computeChunkStatus(run, null, exec.getNode("2"), exec.getNode("6"), null);
         Assert.assertEquals(GenericStatus.ABORTED, status);
     }
+
+    @Test
+    public void busyStepTest() throws Exception {
+        WorkflowJob job = j.jenkins.createProject(WorkflowJob.class, "InputJob");
+        job.setDefinition(new CpsFlowDefinition("node {\n" +
+                "    stage(\"parallelStage\"){\n" +
+                "      parallel left : {\n" +
+                "            echo \"running\"\n" +
+                "            def branchInput = input message: 'Please input branch to test against', parameters: [[$class: 'StringParameterDefinition', defaultValue: 'master', description: '', name: 'branch']]\n" +
+                "            echo \"BRANCH NAME: ${branchInput}\"\n" +
+                "        }, \n" +
+                "        right : {\n" +
+                "            sh 'sleep 10000'\n" + //13
+                "        }\n" +
+                "    }\n" +
+                "}"));
+        QueueTaskFuture<WorkflowRun> buildTask = job.scheduleBuild2(0);
+        WorkflowRun run = buildTask.getStartCondition().get();
+        CpsFlowExecution e = (CpsFlowExecution) run.getExecutionPromise().get();
+        while (run.getAction(InputAction.class)==null) {
+            e.waitForSuspension();
+        }
+        e = (CpsFlowExecution)(run.getExecution());
+        StatusAndTiming.printNodes(run, false, false);
+        GenericStatus status = StatusAndTiming.computeChunkStatus(run, null, e.getNode("13"), e.getNode("13"), null);
+        Assert.assertEquals(GenericStatus.IN_PROGRESS, status);
+
+        status = StatusAndTiming.computeChunkStatus(run, null, e.getNode("12"), e.getNode("12"), null);
+        Assert.assertEquals(GenericStatus.PAUSED_PENDING_INPUT, status);
+    }
+
 }
