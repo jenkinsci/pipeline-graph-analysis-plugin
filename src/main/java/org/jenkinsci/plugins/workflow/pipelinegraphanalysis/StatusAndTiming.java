@@ -169,7 +169,9 @@ public class StatusAndTiming {
                         return (lastNode.getError() == null) ? GenericStatus.SUCCESS : GenericStatus.FAILURE;
                     }
                 }
-                return (isPendingInput(run) && lastNode.getAction(PauseAction.class) != null)
+                PauseAction pauseAction = lastNode.getAction(PauseAction.class);
+                return (isPendingInput(run) &&
+                        pauseAction != null && pauseAction.getCause().equals("Input"))
                         ? GenericStatus.PAUSED_PENDING_INPUT : GenericStatus.IN_PROGRESS;
             } else {
                 // Final chunk on completed build
