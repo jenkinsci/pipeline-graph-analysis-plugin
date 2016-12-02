@@ -26,6 +26,7 @@ package org.jenkinsci.plugins.workflow.pipelinegraphanalysis;
 
 import hudson.model.Result;
 import hudson.model.queue.QueueTaskFuture;
+import org.apache.commons.lang.SystemUtils;
 import org.jenkinsci.plugins.workflow.actions.TimingAction;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowExecution;
@@ -426,4 +427,37 @@ public class StatusAndTimingTest {
         status = StatusAndTiming.computeChunkStatus(run, null, exec.getNode("2"), exec.getNode("6"), null);
         Assert.assertEquals(GenericStatus.ABORTED, status);
     }
+
+    @Test
+    public void busyStepTest() throws Exception {
+        WorkflowJob job = j.jenkins.createProject(WorkflowJob.class, "InputJob");
+        String sleep = "sh 'sleep 10000'\n";
+        if(SystemUtils.IS_OS_WINDOWS){
+            sleep = "bat 'timeout /t 30'\n";
+        }
+        job.setDefinition(new CpsFlowDefinition("node {\n" +
+                "    stage(\"parallelStage\"){\n" +
+                "      parallel left : {\n" +
+                "            echo \"running\"\n" +
+                "            input message: 'Please input branch to test against' \n" +
+                "        }, \n" +
+                "        right : {\n" +
+                sleep + //13
+                "        }\n" +
+                "    }\n" +
+                "}"));
+        QueueTaskFuture<WorkflowRun> buildTask = job.scheduleBuild2(0);
+        WorkflowRun run = buildTask.getStartCondition().get();
+        CpsFlowExecution e = (CpsFlowExecution) run.getExecutionPromise().get();
+        while (run.getAction(InputAction.class)==null) {
+            e.waitForSuspension();
+        }
+        e = (CpsFlowExecution)(run.getExecution());
+        GenericStatus status = StatusAndTiming.computeChunkStatus(run, null, e.getNode("13"), e.getNode("13"), null);
+        Assert.assertEquals(GenericStatus.IN_PROGRESS, status);
+
+        status = StatusAndTiming.computeChunkStatus(run, null, e.getNode("12"), e.getNode("12"), null);
+        Assert.assertEquals(GenericStatus.PAUSED_PENDING_INPUT, status);
+    }
+
 }
