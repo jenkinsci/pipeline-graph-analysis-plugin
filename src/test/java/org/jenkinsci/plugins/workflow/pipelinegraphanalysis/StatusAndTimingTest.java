@@ -33,6 +33,9 @@ import org.jenkinsci.plugins.workflow.cps.CpsFlowExecution;
 import org.jenkinsci.plugins.workflow.flow.FlowExecution;
 import org.jenkinsci.plugins.workflow.graph.BlockStartNode;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
+import org.jenkinsci.plugins.workflow.graphanalysis.ForkScanner;
+import org.jenkinsci.plugins.workflow.graphanalysis.NoOpChunkFinder;
+import org.jenkinsci.plugins.workflow.graphanalysis.TestVisitor;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 import org.jenkinsci.plugins.workflow.support.steps.input.InputAction;
@@ -314,6 +317,42 @@ public class StatusAndTimingTest {
                 run, 0, exec.getNode("2"), exec.getNode("6"), null);
         Assert.assertEquals((double)(currTime-run.getStartTimeInMillis()), (double)(tim.getTotalDurationMillis()), 20.0);
         SemaphoreStep.success("wait/1", null);
+    }
+
+
+    @Test
+    public void timingTest() throws Exception {
+        // Problem here: for runs in progress we should be using current time if they're the last run node, aka the in-progress node
+        String jobScript = ""+
+                "stage 'first'\n" +
+                "parallel 'long' : { sleep 10; }, \n" +
+                "         'short': { sleep 2; }";
+
+        // This must be amateur science fiction because the exposition for the setting goes on FOREVER
+        ForkScanner scan = new ForkScanner();
+        WorkflowJob job = j.jenkins.createProject(WorkflowJob.class, "parallelTimes");
+        job.setDefinition(new CpsFlowDefinition(jobScript));
+        WorkflowRun run = job.scheduleBuild2(0).getStartCondition().get();
+        Thread.sleep(4000);  // We need the short branch to be complete so we know timing should exceed its duration
+        FlowExecution exec = run.getExecution();
+        List<FlowNode> heads = exec.getCurrentHeads();
+        Assert.assertEquals(GenericStatus.IN_PROGRESS, StatusAndTiming.computeChunkStatus(
+                run, null, exec.getNode("2"), heads.get(0), null));
+        Assert.assertEquals(GenericStatus.SUCCESS, StatusAndTiming.computeChunkStatus(
+                run, null, exec.getNode("2"), heads.get(1), null));
+        TestVisitor visitor = new TestVisitor();
+        scan.setup(heads);
+        scan.visitSimpleChunks(heads, visitor, new NoOpChunkFinder());
+        TestVisitor.CallEntry entry = visitor.filteredCallsByType(TestVisitor.CallType.PARALLEL_END).get(0);
+        FlowNode endNode = exec.getNode(entry.getNodeId().toString());
+        Assert.assertEquals("sleep", endNode.getDisplayFunctionName());
+
+        // Finally, the heart of the matter: test computing durations
+        TimingInfo times = StatusAndTiming.computeChunkTiming(run, 0, exec.getNode("2"), exec.getNode(entry.getNodeId().toString()), null);
+        Assert.assertTrue("Underestimated duration", times.getTotalDurationMillis() >= 3000);
+
+        j.waitForCompletion(run);
+        j.assertBuildStatusSuccess(run);
     }
 
     @Test
