@@ -24,8 +24,10 @@
 
 package org.jenkinsci.plugins.workflow.pipelinegraphanalysis;
 
+import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
+import com.google.common.collect.Collections2;
 import hudson.model.Action;
 import hudson.model.Result;
 import org.apache.commons.lang.StringUtils;
@@ -51,6 +53,7 @@ import org.kohsuke.accmod.restrictions.DoNotUse;
 
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -388,7 +391,7 @@ public class StatusAndTiming {
 
     /**
      * Helper, prints flow graph in some detail - now a common utility so others don't have to reinvent it
-     * @param run
+     * @param run Run to show nodes for
      * @param showTiming
      * @param showActions
      */
@@ -428,10 +431,16 @@ public class StatusAndTiming {
         System.out.println("Action format: ");
         System.out.println("\t- actionClassName actionDisplayName");
         System.out.println("------------------------------------------------------------------------------------------");
+        Function<FlowNode, String> flowNodeToId = new Function<FlowNode, String>(){
+            @Override
+            public String apply(@Nullable FlowNode input) {
+                return (input != null) ? input.getId() : null;
+            }
+        };
         for (FlowNode node : sorted) {
             StringBuilder formatted = new StringBuilder();
             formatted.append('[').append(node.getId()).append(']');
-            formatted.append('{').append(StringUtils.join(node.getParentIds(), ',')).append('}');
+            formatted.append('{').append(StringUtils.join(Collections2.transform(node.getParents(), flowNodeToId), ',')).append('}');
             if (showTiming) {
                 formatted.append('(');
                 if (node.getAction(TimingAction.class) != null) {
