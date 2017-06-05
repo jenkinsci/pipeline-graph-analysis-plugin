@@ -333,7 +333,7 @@ public class StatusAndTimingTest {
         WorkflowJob job = j.jenkins.createProject(WorkflowJob.class, "parallelTimes");
         job.setDefinition(new CpsFlowDefinition(jobScript));
         WorkflowRun run = job.scheduleBuild2(0).getStartCondition().get();
-        Thread.sleep(4000);  // Such a dirty hack, but this isn't reproducible with normal SemaphoreStep use
+        Thread.sleep(4000);  // We need the short branch to be complete so we know timing should exceed its duration
         FlowExecution exec = run.getExecution();
         List<FlowNode> heads = exec.getCurrentHeads();
         Assert.assertEquals(GenericStatus.IN_PROGRESS, StatusAndTiming.computeChunkStatus(
