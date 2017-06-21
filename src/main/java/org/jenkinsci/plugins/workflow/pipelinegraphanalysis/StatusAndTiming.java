@@ -180,7 +180,7 @@ public class StatusAndTiming {
                     if (execAction != null) {
                         if (execAction.isQueued()) {
                             return GenericStatus.QUEUED;
-                        } else if (execAction.isCanceled()) {
+                        } else if (execAction.isCancelled()) {
                             return GenericStatus.ABORTED;
                         } else {
                             return GenericStatus.IN_PROGRESS;

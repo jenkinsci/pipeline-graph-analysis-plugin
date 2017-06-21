@@ -599,7 +599,7 @@ public class StatusAndTimingTest {
         execAction = stepStart.getAction(ExecutorTaskInfoAction.class);
         assertNotNull(execAction);
         assertFalse(execAction.isLaunched());
-        assertTrue(execAction.isCanceled());
+        assertTrue(execAction.isCancelled());
     }
 
     @Issue("JENKINS-44981")
