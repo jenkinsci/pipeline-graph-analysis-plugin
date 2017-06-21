@@ -32,9 +32,11 @@ import hudson.model.Action;
 import hudson.model.Result;
 import org.apache.commons.lang.StringUtils;
 import org.jenkinsci.plugins.workflow.actions.ErrorAction;
+import org.jenkinsci.plugins.workflow.actions.ExecutorTaskInfoAction;
 import org.jenkinsci.plugins.workflow.actions.NotExecutedNodeAction;
 import org.jenkinsci.plugins.workflow.actions.ThreadNameAction;
 import org.jenkinsci.plugins.workflow.actions.TimingAction;
+import org.jenkinsci.plugins.workflow.cps.nodes.StepStartNode;
 import org.jenkinsci.plugins.workflow.flow.FlowExecution;
 import org.jenkinsci.plugins.workflow.graph.BlockEndNode;
 import org.jenkinsci.plugins.workflow.graph.BlockStartNode;
@@ -172,10 +174,27 @@ public class StatusAndTiming {
                         return (lastNode.getError() == null) ? GenericStatus.SUCCESS : GenericStatus.FAILURE;
                     }
                 }
+
+                if (lastNode instanceof StepStartNode) {
+                    ExecutorTaskInfoAction execAction = lastNode.getAction(ExecutorTaskInfoAction.class);
+                    if (execAction != null) {
+                        if (execAction.isQueued()) {
+                            return GenericStatus.QUEUED;
+                        } else if (execAction.isCanceled()) {
+                            return GenericStatus.ABORTED;
+                        } else {
+                            return GenericStatus.IN_PROGRESS;
+                        }
+                    }
+                }
+
                 PauseAction pauseAction = lastNode.getAction(PauseAction.class);
-                return (isPendingInput(run) &&
-                        pauseAction != null && pauseAction.getCause().equals("Input"))
-                        ? GenericStatus.PAUSED_PENDING_INPUT : GenericStatus.IN_PROGRESS;
+                if (isPendingInput(run) &&
+                        pauseAction != null && pauseAction.getCause().equals("Input")) {
+                    return GenericStatus.PAUSED_PENDING_INPUT;
+                } else {
+                    return GenericStatus.IN_PROGRESS;
+                }
             } else {
                 // Final chunk on completed build
                 Result r = run.getResult();
