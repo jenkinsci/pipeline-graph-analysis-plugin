@@ -176,15 +176,12 @@ public class StatusAndTiming {
                 }
 
                 if (lastNode instanceof StepStartNode) {
-                    ExecutorTaskInfoAction execAction = lastNode.getAction(ExecutorTaskInfoAction.class);
-                    if (execAction != null) {
-                        if (execAction.isQueued()) {
-                            return GenericStatus.QUEUED;
-                        } else if (execAction.isCancelled()) {
-                            return GenericStatus.ABORTED;
-                        } else {
-                            return GenericStatus.IN_PROGRESS;
-                        }
+                    if (ExecutorTaskInfoAction.isNodeQueued(lastNode)) {
+                        return GenericStatus.QUEUED;
+                    } else if (ExecutorTaskInfoAction.isNodeCancelled(lastNode)) {
+                        return GenericStatus.ABORTED;
+                    } else {
+                        return GenericStatus.IN_PROGRESS;
                     }
                 }
 
