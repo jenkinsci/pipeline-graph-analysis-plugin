@@ -29,7 +29,7 @@ import hudson.model.Result;
 import hudson.model.queue.QueueTaskFuture;
 import hudson.slaves.DumbSlave;
 import org.apache.commons.lang.SystemUtils;
-import org.jenkinsci.plugins.workflow.actions.ExecutorTaskInfoAction;
+import org.jenkinsci.plugins.workflow.actions.TaskInfoAction;
 import org.jenkinsci.plugins.workflow.actions.TimingAction;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowExecution;
@@ -60,7 +60,6 @@ import java.util.Map;
 import java.util.TreeSet;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -536,10 +535,8 @@ public class StatusAndTimingTest {
         assertNotNull(stepStart);
         GenericStatus status = StatusAndTiming.computeChunkStatus(b1, null, execution.getNode("2"), execution.getNode("5"), null);
         assertEquals(GenericStatus.QUEUED, status);
-        ExecutorTaskInfoAction execAction = stepStart.getAction(ExecutorTaskInfoAction.class);
-        assertNotNull(execAction);
-        assertTrue(execAction.isQueued());
-        assertEquals("Waiting for next available executor", execAction.getWhyBlocked());
+        assertEquals(TaskInfoAction.QueueState.QUEUED, TaskInfoAction.getNodeState(stepStart));
+        assertEquals("Waiting for next available executor", TaskInfoAction.getWhyBlockedForNode(stepStart));
 
         DumbSlave agent = j.createSlave("test-agent", "test", null);
 
@@ -549,10 +546,8 @@ public class StatusAndTimingTest {
 
         stepStart = execution.getNode("5");
         assertNotNull(stepStart);
-        execAction = stepStart.getAction(ExecutorTaskInfoAction.class);
-        assertNotNull(execAction);
-        assertTrue(execAction.isLaunched());
-        assertNull(execAction.getWhyBlocked());
+        assertEquals(TaskInfoAction.QueueState.LAUNCHED, TaskInfoAction.getNodeState(stepStart));
+        assertNull(TaskInfoAction.getWhyBlockedForNode(stepStart));
 
         SemaphoreStep.success("wait/1", null);
         j.assertBuildStatusSuccess(j.waitForCompletion(b1));
@@ -580,10 +575,8 @@ public class StatusAndTimingTest {
         assertNotNull(stepStart);
         GenericStatus status = StatusAndTiming.computeChunkStatus(b1, null, execution.getNode("2"), execution.getNode("5"), null);
         assertEquals(GenericStatus.QUEUED, status);
-        ExecutorTaskInfoAction execAction = stepStart.getAction(ExecutorTaskInfoAction.class);
-        assertNotNull(execAction);
-        assertTrue(execAction.isQueued());
-        assertEquals("Waiting for next available executor", execAction.getWhyBlocked());
+        assertEquals(TaskInfoAction.QueueState.QUEUED, TaskInfoAction.getNodeState(stepStart));
+        assertEquals("Waiting for next available executor", TaskInfoAction.getWhyBlockedForNode(stepStart));
 
         Queue.Item[] items = Queue.getInstance().getItems();
         assertEquals(1, items.length);
@@ -596,10 +589,8 @@ public class StatusAndTimingTest {
 
         stepStart = execution.getNode("5");
         assertNotNull(stepStart);
-        execAction = stepStart.getAction(ExecutorTaskInfoAction.class);
-        assertNotNull(execAction);
-        assertFalse(execAction.isLaunched());
-        assertTrue(execAction.isCancelled());
+        assertEquals(TaskInfoAction.QueueState.CANCELLED, TaskInfoAction.getNodeState(stepStart));
+        assertNull(TaskInfoAction.getWhyBlockedForNode(stepStart));
     }
 
     @Issue("JENKINS-44981")
@@ -678,10 +669,9 @@ public class StatusAndTimingTest {
 
         FlowNode stepStart = execution.getNode("9");
         assertNotNull(stepStart);
-        ExecutorTaskInfoAction execAction = stepStart.getAction(ExecutorTaskInfoAction.class);
-        assertNotNull(execAction);
-        assertTrue(execAction.isQueued());
-        assertEquals("There are no nodes with the label ‘second’", execAction.getWhyBlocked());
+        assertEquals(TaskInfoAction.QueueState.QUEUED, TaskInfoAction.getNodeState(stepStart));
+        assertEquals("There are no nodes with the label ‘second’",
+                TaskInfoAction.getWhyBlockedForNode(stepStart));
 
         SemaphoreStep.success("wait-b/1", null);
         // Sleep to make sure we get the b branch end node...
