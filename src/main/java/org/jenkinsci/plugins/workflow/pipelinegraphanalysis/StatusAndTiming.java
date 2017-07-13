@@ -177,7 +177,6 @@ public class StatusAndTiming {
 
                 if (lastNode instanceof StepStartNode) {
                     TaskInfoAction.QueueState queueState = TaskInfoAction.getNodeState(lastNode);
-                    System.err.println("QUEUE STATE: " + queueState);
                     if (queueState == TaskInfoAction.QueueState.QUEUED) {
                         return GenericStatus.QUEUED;
                     } else if (queueState == TaskInfoAction.QueueState.CANCELLED) {
