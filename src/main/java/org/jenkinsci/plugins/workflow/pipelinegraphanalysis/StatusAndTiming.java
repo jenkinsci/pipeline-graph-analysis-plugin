@@ -33,7 +33,7 @@ import hudson.model.Result;
 import org.apache.commons.lang.StringUtils;
 import org.jenkinsci.plugins.workflow.actions.ErrorAction;
 import org.jenkinsci.plugins.workflow.actions.NotExecutedNodeAction;
-import org.jenkinsci.plugins.workflow.actions.TaskInfoAction;
+import org.jenkinsci.plugins.workflow.actions.QueueItemAction;
 import org.jenkinsci.plugins.workflow.actions.ThreadNameAction;
 import org.jenkinsci.plugins.workflow.actions.TimingAction;
 import org.jenkinsci.plugins.workflow.cps.nodes.StepStartNode;
@@ -175,11 +175,11 @@ public class StatusAndTiming {
                     }
                 }
 
-                if (lastNode instanceof StepStartNode) {
-                    TaskInfoAction.QueueState queueState = TaskInfoAction.getNodeState(lastNode);
-                    if (queueState == TaskInfoAction.QueueState.QUEUED) {
+                if (lastNode instanceof StepStartNode && lastNode.getAction(QueueItemAction.class) != null) {
+                    QueueItemAction.QueueState queueState = QueueItemAction.getNodeState(lastNode);
+                    if (queueState == QueueItemAction.QueueState.QUEUED) {
                         return GenericStatus.QUEUED;
-                    } else if (queueState == TaskInfoAction.QueueState.CANCELLED) {
+                    } else if (queueState == QueueItemAction.QueueState.CANCELLED) {
                         return GenericStatus.ABORTED;
                     } else {
                         return GenericStatus.IN_PROGRESS;
