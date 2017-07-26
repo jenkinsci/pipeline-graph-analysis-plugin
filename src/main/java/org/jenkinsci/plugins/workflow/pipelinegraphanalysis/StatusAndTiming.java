@@ -135,6 +135,7 @@ public class StatusAndTiming {
 
     /**
      * Return status or null if not executed all (null FlowExecution)
+     * Note: API consumers MUST provide support for new/unknown {@link GenericStatus} values.
      * @param run
      * @param chunk
      * @return Status or null if not executed all (null FlowExecution)
@@ -172,6 +173,7 @@ public class StatusAndTiming {
      * Compute the overall status for a chunk comprising firstNode through lastNode, inclusive
      * <p> All nodes must be in the same execution </p>
      * <p> Note: for in-progress builds with parallel branches, if the branch is done, it has its own status. </p>
+     * Note: API consumers MUST provide support for new/unknown {@link GenericStatus} values.
      * @param run Run that nodes belong to
      * @param before Node before the first node in this piece
      * @param firstNode First node of this piece
