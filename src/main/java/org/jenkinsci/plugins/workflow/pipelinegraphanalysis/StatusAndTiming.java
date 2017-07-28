@@ -33,8 +33,10 @@ import hudson.model.Result;
 import org.apache.commons.lang.StringUtils;
 import org.jenkinsci.plugins.workflow.actions.ErrorAction;
 import org.jenkinsci.plugins.workflow.actions.NotExecutedNodeAction;
+import org.jenkinsci.plugins.workflow.actions.QueueItemAction;
 import org.jenkinsci.plugins.workflow.actions.ThreadNameAction;
 import org.jenkinsci.plugins.workflow.actions.TimingAction;
+import org.jenkinsci.plugins.workflow.cps.nodes.StepStartNode;
 import org.jenkinsci.plugins.workflow.flow.FlowExecution;
 import org.jenkinsci.plugins.workflow.graph.BlockEndNode;
 import org.jenkinsci.plugins.workflow.graph.BlockStartNode;
@@ -121,29 +123,57 @@ public class StatusAndTiming {
     }
 
     /**
+     * Deprecated version that coerces {@link GenericStatus} values to the original set (without {@link GenericStatus#QUEUED}).
+     * Most consumers should switch to {@link #computeChunkStatus2(WorkflowRun, MemoryFlowChunk)} and handle unknown status codes.
+     */
+    @CheckForNull
+    @Deprecated
+    public static GenericStatus computeChunkStatus(@Nonnull WorkflowRun run, @Nonnull MemoryFlowChunk chunk) {
+        GenericStatus newStatusEnum = computeChunkStatus2(run, chunk);
+        return (newStatusEnum == GenericStatus.QUEUED) ? GenericStatus.IN_PROGRESS : newStatusEnum;
+    }
+
+    /**
      * Return status or null if not executed all (null FlowExecution)
+     * Note: API consumers MUST provide support for new/unknown {@link GenericStatus} values.
      * @param run
      * @param chunk
      * @return Status or null if not executed all (null FlowExecution)
      */
     @CheckForNull
-    public static GenericStatus computeChunkStatus(@Nonnull WorkflowRun run, @Nonnull MemoryFlowChunk chunk) {
+    public static GenericStatus computeChunkStatus2(@Nonnull WorkflowRun run, @Nonnull MemoryFlowChunk chunk) {
         FlowExecution exec = run.getExecution();
         if (exec == null) {
             return null;
         }
         if (chunk instanceof ParallelMemoryFlowChunk) {
             ParallelMemoryFlowChunk par = ((ParallelMemoryFlowChunk) chunk);
-            return condenseStatus(computeBranchStatuses(run, par).values());
+            return condenseStatus(computeBranchStatuses2(run, par).values());
         } else {
-            return computeChunkStatus(run, chunk.getNodeBefore(), chunk.getFirstNode(), chunk.getLastNode(), chunk.getNodeAfter());
+            return computeChunkStatus2(run, chunk.getNodeBefore(), chunk.getFirstNode(), chunk.getLastNode(), chunk.getNodeAfter());
         }
     }
+
+    /**
+     * Deprecated version that coerces {@link GenericStatus} values to the original set (without {@link GenericStatus#QUEUED}).
+     * Most consumers should switch to {@link #computeChunkStatus2(WorkflowRun, FlowNode, FlowNode, FlowNode, FlowNode)}
+     *  and handle unknown status codes.
+     */
+    @CheckForNull
+    @Deprecated
+    public static GenericStatus computeChunkStatus(@Nonnull WorkflowRun run,
+                                                    @CheckForNull FlowNode before, @Nonnull FlowNode firstNode,
+                                                    @Nonnull FlowNode lastNode, @CheckForNull FlowNode after) {
+        GenericStatus newStatusEnum = computeChunkStatus2(run, before, firstNode, lastNode, after);
+        return (newStatusEnum == GenericStatus.QUEUED) ? GenericStatus.IN_PROGRESS : newStatusEnum;
+    }
+
 
     /**
      * Compute the overall status for a chunk comprising firstNode through lastNode, inclusive
      * <p> All nodes must be in the same execution </p>
      * <p> Note: for in-progress builds with parallel branches, if the branch is done, it has its own status. </p>
+     * Note: API consumers MUST provide support for new/unknown {@link GenericStatus} values.
      * @param run Run that nodes belong to
      * @param before Node before the first node in this piece
      * @param firstNode First node of this piece
@@ -152,9 +182,9 @@ public class StatusAndTiming {
      * @return Status for the piece, or null if the FlowExecution is null.
      */
     @CheckForNull
-    public static GenericStatus computeChunkStatus(@Nonnull WorkflowRun run,
-                                                   @CheckForNull FlowNode before, @Nonnull FlowNode firstNode,
-                                                   @Nonnull FlowNode lastNode, @CheckForNull FlowNode after) {
+    public static GenericStatus computeChunkStatus2(@Nonnull WorkflowRun run,
+                                                    @CheckForNull FlowNode before, @Nonnull FlowNode firstNode,
+                                                    @Nonnull FlowNode lastNode, @CheckForNull FlowNode after) {
         FlowExecution exec = run.getExecution();
         verifySameRun(run, before, firstNode, lastNode, after);
         if (exec == null) {
@@ -172,10 +202,25 @@ public class StatusAndTiming {
                         return (lastNode.getError() == null) ? GenericStatus.SUCCESS : GenericStatus.FAILURE;
                     }
                 }
+
+                if (lastNode instanceof StepStartNode && lastNode.getAction(QueueItemAction.class) != null) {
+                    QueueItemAction.QueueState queueState = QueueItemAction.getNodeState(lastNode);
+                    if (queueState == QueueItemAction.QueueState.QUEUED) {
+                        return GenericStatus.QUEUED;
+                    } else if (queueState == QueueItemAction.QueueState.CANCELLED) {
+                        return GenericStatus.ABORTED;
+                    } else {
+                        return GenericStatus.IN_PROGRESS;
+                    }
+                }
+
                 PauseAction pauseAction = lastNode.getAction(PauseAction.class);
-                return (isPendingInput(run) &&
-                        pauseAction != null && pauseAction.getCause().equals("Input"))
-                        ? GenericStatus.PAUSED_PENDING_INPUT : GenericStatus.IN_PROGRESS;
+                if (isPendingInput(run) &&
+                        pauseAction != null && pauseAction.getCause().equals("Input")) {
+                    return GenericStatus.PAUSED_PENDING_INPUT;
+                } else {
+                    return GenericStatus.IN_PROGRESS;
+                }
             } else {
                 // Final chunk on completed build
                 Result r = run.getResult();
@@ -322,9 +367,30 @@ public class StatusAndTiming {
         return timings;
     }
 
+    private static Map<String, GenericStatus> coerceStatusMap(Map<String, GenericStatus> newStatusMap) {
+        HashMap<String, GenericStatus> coercedVals = new HashMap<String, GenericStatus>(newStatusMap.size());
+        for (Map.Entry<String, GenericStatus> oldEntry : newStatusMap.entrySet()) {
+            GenericStatus newStatus = oldEntry.getValue();
+            newStatus = (newStatus == GenericStatus.QUEUED) ? GenericStatus.IN_PROGRESS : newStatus;
+            coercedVals.put(oldEntry.getKey(), newStatus);
+        }
+        return coercedVals;
+    }
+
     @Nonnull
-    /** Get statuses for each branch - note: some statuses may be null, */
+    @Deprecated
+    /** Get statuses for each branch - note: some statuses may be null. Retains compatibility with the original GenericStatus values.
+     *  Use {@link #computeBranchStatuses2(WorkflowRun, ParallelMemoryFlowChunk)} once you have a solid way to support new status codings.
+     */
     public static Map<String, GenericStatus> computeBranchStatuses(@Nonnull WorkflowRun run, @Nonnull ParallelMemoryFlowChunk parallel) {
+        return coerceStatusMap(computeBranchStatuses2(run, parallel));
+    }
+
+
+
+    @Nonnull
+    /** Get statuses for each branch - note: some statuses may be null, and you need to have a way to handle new and unknown GenericStatus values */
+    public static Map<String, GenericStatus> computeBranchStatuses2(@Nonnull WorkflowRun run, @Nonnull ParallelMemoryFlowChunk parallel) {
         Map<String,MemoryFlowChunk> branches = parallel.getBranches();
         List<BlockStartNode> starts = new ArrayList<BlockStartNode>(branches.size());
         List<FlowNode> ends = new ArrayList<FlowNode>(branches.size());
@@ -333,13 +399,27 @@ public class StatusAndTiming {
             starts.add((BlockStartNode)chunk.getFirstNode());
             ends.add(chunk.getLastNode());
         }
-        return computeBranchStatuses(run, parallel.getFirstNode(), starts, ends, parallel.getLastNode());
+        return computeBranchStatuses2(run, parallel.getFirstNode(), starts, ends, parallel.getLastNode());
+    }
+
+    /** Get statuses for each branch - note: some statuses may be null. Retains compatibility with the original GenericStatus values.
+     *  Use {@link #computeBranchStatuses2(WorkflowRun, FlowNode, List, List, FlowNode)} once you have a solid way to support new status codings.
+     */
+    @Deprecated
+    @Nonnull
+    public static Map<String, GenericStatus> computeBranchStatuses(@Nonnull WorkflowRun run,
+                                                                    @Nonnull FlowNode parallelStart,
+                                                                    @Nonnull List<BlockStartNode> branchStarts,
+                                                                    @Nonnull List<FlowNode> branchEnds,
+                                                                    @CheckForNull FlowNode parallelEnd) {
+        return coerceStatusMap(computeBranchStatuses2(run, parallelStart, branchStarts, branchEnds, parallelEnd));
     }
 
     /**
      * Compute status codes for a set of parallel branches.
-     * <p> Note per {@link #computeChunkStatus(WorkflowRun, MemoryFlowChunk)} for in-progress builds with
+     * <p> Note per {@link #computeChunkStatus2(WorkflowRun, MemoryFlowChunk)} for in-progress builds with
      *     parallel branches, if the branch is done, it has its own status. </p>
+     * Note that API consumers should handle unknown (new) status codes.
      * @param run Run containing these nodes
      * @param branchStarts The nodes starting off each parallel branch (BlockStartNode)
      * @param branchEnds Last node in each parallel branch - might be the end of the branch, or might just be the latest step run
@@ -348,11 +428,11 @@ public class StatusAndTiming {
      * @return Map of branch name to its status
      */
     @Nonnull
-    public static Map<String, GenericStatus> computeBranchStatuses(@Nonnull WorkflowRun run,
-                                                                   @Nonnull FlowNode parallelStart,
-                                                                   @Nonnull List<BlockStartNode> branchStarts,
-                                                                   @Nonnull List<FlowNode> branchEnds,
-                                                                   @CheckForNull FlowNode parallelEnd) {
+    public static Map<String, GenericStatus> computeBranchStatuses2(@Nonnull WorkflowRun run,
+                                                                    @Nonnull FlowNode parallelStart,
+                                                                    @Nonnull List<BlockStartNode> branchStarts,
+                                                                    @Nonnull List<FlowNode> branchEnds,
+                                                                    @CheckForNull FlowNode parallelEnd) {
         verifySameRun(run, branchStarts.toArray(new FlowNode[0]));
         verifySameRun(run, branchEnds.toArray(new FlowNode[0]));
         verifySameRun(run, parallelStart, parallelEnd);
@@ -370,7 +450,7 @@ public class StatusAndTiming {
             }
             ThreadNameAction branchName = start.getAction(ThreadNameAction.class);
             assert branchName != null;
-            statusMappings.put(branchName.getThreadName(), computeChunkStatus(run, parallelStart, start, end, parallelEnd));
+            statusMappings.put(branchName.getThreadName(), computeChunkStatus2(run, parallelStart, start, end, parallelEnd));
         }
         return statusMappings;
     }

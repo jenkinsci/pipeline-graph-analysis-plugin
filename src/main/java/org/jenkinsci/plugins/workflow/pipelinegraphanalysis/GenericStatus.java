@@ -46,6 +46,11 @@ public enum GenericStatus {
     UNSTABLE,
 
     /**
+     * Not complete: still executing, in a node block, but the node block is in queue.
+     */
+    QUEUED,
+
+    /**
      * Not complete: still executing, waiting for a result
      */
     IN_PROGRESS,
