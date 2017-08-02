@@ -57,9 +57,11 @@ import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -84,6 +86,47 @@ import java.util.Map;
  * @author Sam Van Oort
  */
 public class StatusAndTiming {
+
+    public static class StatusApiVersion {
+        private final int version;
+        public final EnumSet<GenericStatus> allowedStatuses;
+
+        public int getVersion() {
+            return version;
+        }
+
+        public EnumSet<GenericStatus> getAllowedStatuses() {
+            return allowedStatuses;
+        }
+
+        StatusApiVersion(int version, EnumSet<GenericStatus> allowedStatuses) {
+            this.version = version;
+            this.allowedStatuses = allowedStatuses;
+        }
+    }
+
+    public static final List<StatusApiVersion> API_VERSIONS = (List<StatusApiVersion>)(Collections.unmodifiableList(Arrays.asList(
+       new StatusApiVersion(1, EnumSet.of(GenericStatus.NOT_EXECUTED, GenericStatus.SUCCESS, GenericStatus.UNSTABLE, GenericStatus.IN_PROGRESS, GenericStatus.FAILURE, GenericStatus.ABORTED, GenericStatus.PAUSED_PENDING_INPUT)),
+       new StatusApiVersion(2, EnumSet.of(GenericStatus.NOT_EXECUTED, GenericStatus.SUCCESS, GenericStatus.UNSTABLE, GenericStatus.QUEUED, GenericStatus.IN_PROGRESS, GenericStatus.FAILURE, GenericStatus.ABORTED, GenericStatus.PAUSED_PENDING_INPUT))
+    )));
+
+    public static final StatusApiVersion CURRENT_API_VERSION = API_VERSIONS.get(1);
+
+    /**
+     * Use this to permit consuming this API without having to be aware of new {@link GenericStatus} codes.
+     * This will do a mapping from status codes to the closest equivalent in an older version of this API.
+     * For example, {@link GenericStatus#QUEUED} was originally coded as {@link GenericStatus#IN_PROGRESS}
+     * @param rawStatus Input status from recent forms of this API
+     * @param desiredVersion Defines the statuses supported by the API version we wish to consume
+     * @return Input status correctly coerced to the best match among {@link StatusApiVersion#allowedStatuses}
+     */
+    public static GenericStatus coerceStatusApi(GenericStatus rawStatus, StatusApiVersion desiredVersion) {
+        // Iteratively add additional mapping rules here, which will do one mapping at a time until we get the correct result
+        if (rawStatus == GenericStatus.QUEUED && desiredVersion.equals(API_VERSIONS.get(0))) {
+            return GenericStatus.IN_PROGRESS;
+        }
+        return rawStatus;
+    }
 
     /**
      * Check that all the flownodes &amp; run describe the same pipeline run/execution
