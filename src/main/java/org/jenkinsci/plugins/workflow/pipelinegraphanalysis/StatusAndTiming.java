@@ -28,6 +28,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.collect.Collections2;
+import com.google.common.collect.Sets;
 import hudson.model.Action;
 import hudson.model.Result;
 import org.apache.commons.lang.StringUtils;
@@ -65,6 +66,7 @@ import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Provides common, comprehensive set of APIs for doing status and timing computations on pieces of a pipeline execution.
@@ -87,30 +89,33 @@ import java.util.Map;
  */
 public class StatusAndTiming {
 
-    public static class StatusApiVersion {
+    /** Denotes the version of the status API supported, which marks the permitted {@link GenericStatus} values it may return */
+    public static final class StatusApiVersion {
         private final int version;
-        public final EnumSet<GenericStatus> allowedStatuses;
+        final Set<GenericStatus> allowedStatuses;
 
         public int getVersion() {
             return version;
         }
 
-        public EnumSet<GenericStatus> getAllowedStatuses() {
+        /**
+         * Get set of legal status values
+         * @return Set of legal status values (immutable)
+         */
+        public Set<GenericStatus> getAllowedStatuses() {
             return allowedStatuses;
         }
 
         StatusApiVersion(int version, EnumSet<GenericStatus> allowedStatuses) {
             this.version = version;
-            this.allowedStatuses = allowedStatuses;
+            this.allowedStatuses = Sets.immutableEnumSet(allowedStatuses);
         }
     }
 
-    public static final List<StatusApiVersion> API_VERSIONS = (List<StatusApiVersion>)(Collections.unmodifiableList(Arrays.asList(
-       new StatusApiVersion(1, EnumSet.of(GenericStatus.NOT_EXECUTED, GenericStatus.SUCCESS, GenericStatus.UNSTABLE, GenericStatus.IN_PROGRESS, GenericStatus.FAILURE, GenericStatus.ABORTED, GenericStatus.PAUSED_PENDING_INPUT)),
-       new StatusApiVersion(2, EnumSet.of(GenericStatus.NOT_EXECUTED, GenericStatus.SUCCESS, GenericStatus.UNSTABLE, GenericStatus.QUEUED, GenericStatus.IN_PROGRESS, GenericStatus.FAILURE, GenericStatus.ABORTED, GenericStatus.PAUSED_PENDING_INPUT))
-    )));
+    public static final StatusApiVersion API_V1 = new StatusApiVersion(1, EnumSet.of(GenericStatus.NOT_EXECUTED, GenericStatus.SUCCESS, GenericStatus.UNSTABLE, GenericStatus.IN_PROGRESS, GenericStatus.FAILURE, GenericStatus.ABORTED, GenericStatus.PAUSED_PENDING_INPUT));
+    public static final StatusApiVersion API_V2 = new StatusApiVersion(2, EnumSet.copyOf(Sets.union(API_V1.allowedStatuses, Collections.singleton(GenericStatus.QUEUED))));
 
-    public static final StatusApiVersion CURRENT_API_VERSION = API_VERSIONS.get(1);
+    public static final StatusApiVersion CURRENT_API_VERSION = API_V2;
 
     /**
      * Use this to permit consuming this API without having to be aware of new {@link GenericStatus} codes.
@@ -121,8 +126,9 @@ public class StatusAndTiming {
      * @return Input status correctly coerced to the best match among {@link StatusApiVersion#allowedStatuses}
      */
     public static GenericStatus coerceStatusApi(GenericStatus rawStatus, StatusApiVersion desiredVersion) {
-        // Iteratively add additional mapping rules here, which will do one mapping at a time until we get the correct result
-        if (rawStatus == GenericStatus.QUEUED && desiredVersion.equals(API_VERSIONS.get(0))) {
+        // To simplify this, you can do a series of transformations to map from the current version to the desired version
+        // Using each set to handle newer versions -- this means you don't need to support many-to-many mappings
+        if (rawStatus == GenericStatus.QUEUED && desiredVersion.equals(API_V1)) {
             return GenericStatus.IN_PROGRESS;
         }
         return rawStatus;
@@ -167,18 +173,20 @@ public class StatusAndTiming {
 
     /**
      * Deprecated version that coerces {@link GenericStatus} values to the original set (without {@link GenericStatus#QUEUED}).
-     * Most consumers should switch to {@link #computeChunkStatus2(WorkflowRun, MemoryFlowChunk)} and handle unknown status codes.
+     * Most consumers should switch to {@link #computeChunkStatus2(WorkflowRun, MemoryFlowChunk)} and use
+     *  {@link #coerceStatusApi(GenericStatus, StatusApiVersion)} to map new statuses to recognized ones.
      */
     @CheckForNull
     @Deprecated
     public static GenericStatus computeChunkStatus(@Nonnull WorkflowRun run, @Nonnull MemoryFlowChunk chunk) {
         GenericStatus newStatusEnum = computeChunkStatus2(run, chunk);
-        return (newStatusEnum == GenericStatus.QUEUED) ? GenericStatus.IN_PROGRESS : newStatusEnum;
+        return coerceStatusApi(newStatusEnum, API_V1);
     }
 
     /**
      * Return status or null if not executed all (null FlowExecution)
-     * Note: API consumers MUST provide support for new/unknown {@link GenericStatus} values.
+     * Note: API consumers MUST use {@link #coerceStatusApi(GenericStatus, StatusApiVersion)} on outputs
+     *  to safely handle addition of new statuses.
      * @param run
      * @param chunk
      * @return Status or null if not executed all (null FlowExecution)
@@ -216,7 +224,8 @@ public class StatusAndTiming {
      * Compute the overall status for a chunk comprising firstNode through lastNode, inclusive
      * <p> All nodes must be in the same execution </p>
      * <p> Note: for in-progress builds with parallel branches, if the branch is done, it has its own status. </p>
-     * Note: API consumers MUST provide support for new/unknown {@link GenericStatus} values.
+     * Note: API consumers MUST use {@link #coerceStatusApi(GenericStatus, StatusApiVersion)} on outputs
+     *  to safely handle addition of new statuses.
      * @param run Run that nodes belong to
      * @param before Node before the first node in this piece
      * @param firstNode First node of this piece
@@ -413,9 +422,7 @@ public class StatusAndTiming {
     private static Map<String, GenericStatus> coerceStatusMap(Map<String, GenericStatus> newStatusMap) {
         HashMap<String, GenericStatus> coercedVals = new HashMap<String, GenericStatus>(newStatusMap.size());
         for (Map.Entry<String, GenericStatus> oldEntry : newStatusMap.entrySet()) {
-            GenericStatus newStatus = oldEntry.getValue();
-            newStatus = (newStatus == GenericStatus.QUEUED) ? GenericStatus.IN_PROGRESS : newStatus;
-            coercedVals.put(oldEntry.getKey(), newStatus);
+            coercedVals.put(oldEntry.getKey(), coerceStatusApi(oldEntry.getValue(), API_V1));
         }
         return coercedVals;
     }
@@ -432,7 +439,8 @@ public class StatusAndTiming {
 
 
     @Nonnull
-    /** Get statuses for each branch - note: some statuses may be null, and you need to have a way to handle new and unknown GenericStatus values */
+    /** Get statuses for each branch - note: some statuses may be null, API consumers MUST use {@link #coerceStatusApi(GenericStatus, StatusApiVersion)} on outputs
+     *  to safely handle addition of new statuses. */
     public static Map<String, GenericStatus> computeBranchStatuses2(@Nonnull WorkflowRun run, @Nonnull ParallelMemoryFlowChunk parallel) {
         Map<String,MemoryFlowChunk> branches = parallel.getBranches();
         List<BlockStartNode> starts = new ArrayList<BlockStartNode>(branches.size());
@@ -446,7 +454,8 @@ public class StatusAndTiming {
     }
 
     /** Get statuses for each branch - note: some statuses may be null. Retains compatibility with the original GenericStatus values.
-     *  Use {@link #computeBranchStatuses2(WorkflowRun, FlowNode, List, List, FlowNode)} once you have a solid way to support new status codings.
+     *  Use {@link #computeBranchStatuses2(WorkflowRun, FlowNode, List, List, FlowNode)} once you support use of {@link #coerceStatusApi(GenericStatus, StatusApiVersion)}
+     *   to protect against changes.
      */
     @Deprecated
     @Nonnull
@@ -462,7 +471,8 @@ public class StatusAndTiming {
      * Compute status codes for a set of parallel branches.
      * <p> Note per {@link #computeChunkStatus2(WorkflowRun, MemoryFlowChunk)} for in-progress builds with
      *     parallel branches, if the branch is done, it has its own status. </p>
-     * Note that API consumers should handle unknown (new) status codes.
+     * Note: API consumers MUST use {@link #coerceStatusApi(GenericStatus, StatusApiVersion)} on outputs
+     *  to safely handle addition of new statuses.
      * @param run Run containing these nodes
      * @param branchStarts The nodes starting off each parallel branch (BlockStartNode)
      * @param branchEnds Last node in each parallel branch - might be the end of the branch, or might just be the latest step run
