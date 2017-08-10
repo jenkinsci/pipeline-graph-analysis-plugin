@@ -79,6 +79,20 @@ public class StatusAndTimingTest {
         return output;
     }
 
+    @Test
+    public void testStatusCoercion() throws Exception {
+        // Test that we don't modify existing statuses
+        for (GenericStatus st : StatusAndTiming.API_V1.getAllowedStatuses()) {
+            Assert.assertEquals(st, StatusAndTiming.coerceStatusApi(st, StatusAndTiming.API_V1));
+        }
+        // Test that we don't modify statuses of the same API versions
+        for (GenericStatus st : StatusAndTiming.API_V2.getAllowedStatuses()) {
+            Assert.assertEquals(st, StatusAndTiming.coerceStatusApi(st, StatusAndTiming.API_V2));
+            Assert.assertTrue(StatusAndTiming.API_V1.getAllowedStatuses().contains(StatusAndTiming.coerceStatusApi(st, StatusAndTiming.API_V1)));
+        }
+        Assert.assertEquals(GenericStatus.IN_PROGRESS, StatusAndTiming.coerceStatusApi(GenericStatus.QUEUED, StatusAndTiming.API_V1));
+    }
+
     // Helper
     static public long doTiming(FlowExecution exec, int firstNodeId, int nodeAfterEndId) throws  IOException {
         long startTime = TimingAction.getStartTime(exec.getNode(Integer.toString(firstNodeId)));

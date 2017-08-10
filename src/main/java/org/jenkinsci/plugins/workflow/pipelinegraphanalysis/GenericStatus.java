@@ -26,8 +26,13 @@ package org.jenkinsci.plugins.workflow.pipelinegraphanalysis;
 
 import hudson.model.Result;
 
+import java.util.Map;
+
 /**
  * Statuses of a {@link org.jenkinsci.plugins.workflow.graphanalysis.FlowChunk} in increasing priority order
+ * Note, when adding new statuses you need to add a new {@link org.jenkinsci.plugins.workflow.pipelinegraphanalysis.StatusAndTiming.StatusApiVersion}
+ *  and set the value of {@link StatusAndTiming#CURRENT_API_VERSION} to that,
+ *  and update {@link StatusAndTiming#coerceStatusMap(Map)} to do coercion for new codings to protect core APIs from unknown values
  */
 public enum GenericStatus {
     /**
