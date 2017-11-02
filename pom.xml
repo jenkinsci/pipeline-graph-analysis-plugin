@@ -26,8 +26,8 @@
 
     <licenses>
         <license>
-            <name>The MIT license</name>
-            <url>https://github.com/jenkinsci/pipeline-graph-analysis-plugin/raw/master/LICENSE</url>
+            <name>MIT license</name>
+            <url>https://opensource.org/licenses/MIT</url>
             <distribution>repo</distribution>
         </license>
     </licenses>
