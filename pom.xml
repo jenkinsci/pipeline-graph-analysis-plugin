@@ -24,6 +24,14 @@
         <tag>HEAD</tag>
     </scm>
 
+    <licenses>
+        <license>
+            <name>MIT license</name>
+            <url>https://opensource.org/licenses/MIT</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
     <properties>
         <jenkins.version>2.7.3</jenkins.version>
         <java.level>7</java.level>
