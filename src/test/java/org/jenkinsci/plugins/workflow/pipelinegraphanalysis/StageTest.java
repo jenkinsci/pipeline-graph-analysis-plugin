@@ -1,6 +1,5 @@
 package org.jenkinsci.plugins.workflow.pipelinegraphanalysis;
 
-import junit.framework.Assert;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.graphanalysis.FlowChunkWithContext;
 import org.jenkinsci.plugins.workflow.graphanalysis.ForkScanner;
@@ -8,6 +7,7 @@ import org.jenkinsci.plugins.workflow.graphanalysis.MemoryFlowChunk;
 import org.jenkinsci.plugins.workflow.graphanalysis.StandardChunkVisitor;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
+import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.jvnet.hudson.test.JenkinsRule;
