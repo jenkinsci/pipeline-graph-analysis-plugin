@@ -32,9 +32,12 @@ import com.google.common.collect.Sets;
 import hudson.model.Action;
 import hudson.model.Result;
 import org.apache.commons.lang.StringUtils;
+import org.jenkinsci.plugins.pipeline.StageStatus;
+import org.jenkinsci.plugins.pipeline.StageTagsMetadata;
 import org.jenkinsci.plugins.workflow.actions.ErrorAction;
 import org.jenkinsci.plugins.workflow.actions.NotExecutedNodeAction;
 import org.jenkinsci.plugins.workflow.actions.QueueItemAction;
+import org.jenkinsci.plugins.workflow.actions.TagsAction;
 import org.jenkinsci.plugins.workflow.actions.ThreadNameAction;
 import org.jenkinsci.plugins.workflow.actions.TimingAction;
 import org.jenkinsci.plugins.workflow.cps.nodes.StepStartNode;
@@ -242,7 +245,7 @@ public class StatusAndTiming {
         if (exec == null) {
             return null;
         }
-        if (!NotExecutedNodeAction.isExecuted(lastNode)) {
+        if (!NotExecutedNodeAction.isExecuted(lastNode) || checkStageSkippedForConditional(firstNode)) {
             return GenericStatus.NOT_EXECUTED;
         }
         boolean isLastChunk = after == null || exec.isCurrentHead(lastNode);
@@ -297,6 +300,15 @@ public class StatusAndTiming {
 
         // Previous chunk before end. If flow continued beyond this, it didn't fail.
         return (run.getResult() == Result.UNSTABLE) ? GenericStatus.UNSTABLE : GenericStatus.SUCCESS;
+    }
+
+    private static boolean checkStageSkippedForConditional(FlowNode node) {
+        if (!NodeUtils.isStage(node)) {
+            return false;
+        }
+
+        TagsAction tags = node.getPersistentAction(TagsAction.class);
+        return tags != null && StageStatus.getSkippedForConditional().equals(tags.getTagValue(StageStatus.TAG_NAME));
     }
 
     @CheckForNull
