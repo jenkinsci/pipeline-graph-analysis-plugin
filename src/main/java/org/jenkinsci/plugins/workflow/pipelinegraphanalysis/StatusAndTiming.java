@@ -307,7 +307,7 @@ public class StatusAndTiming {
             return false;
         }
 
-        TagsAction tags = node.getPersistentAction(TagsAction.class);
+        TagsAction tags = node.getAction(TagsAction.class);
         return tags != null && StageStatus.getSkippedForConditional().equals(tags.getTagValue(StageStatus.TAG_NAME));
     }
 
