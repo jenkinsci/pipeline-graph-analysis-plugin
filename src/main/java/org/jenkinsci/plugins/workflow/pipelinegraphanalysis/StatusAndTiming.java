@@ -33,7 +33,6 @@ import hudson.model.Action;
 import hudson.model.Result;
 import org.apache.commons.lang.StringUtils;
 import org.jenkinsci.plugins.pipeline.StageStatus;
-import org.jenkinsci.plugins.pipeline.StageTagsMetadata;
 import org.jenkinsci.plugins.workflow.actions.ErrorAction;
 import org.jenkinsci.plugins.workflow.actions.NotExecutedNodeAction;
 import org.jenkinsci.plugins.workflow.actions.QueueItemAction;
@@ -61,7 +60,6 @@ import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -245,7 +243,7 @@ public class StatusAndTiming {
         if (exec == null) {
             return null;
         }
-        if (!NotExecutedNodeAction.isExecuted(lastNode) || checkStageSkippedForConditional(firstNode)) {
+        if (!NotExecutedNodeAction.isExecuted(lastNode) || wasStageSkippedForConditional(firstNode)) {
             return GenericStatus.NOT_EXECUTED;
         }
         boolean isLastChunk = after == null || exec.isCurrentHead(lastNode);
@@ -302,11 +300,12 @@ public class StatusAndTiming {
         return (run.getResult() == Result.UNSTABLE) ? GenericStatus.UNSTABLE : GenericStatus.SUCCESS;
     }
 
-    private static boolean checkStageSkippedForConditional(FlowNode node) {
-        if (!NodeUtils.isStage(node)) {
-            return false;
-        }
-
+    /**
+     * Check if the specified {@link FlowNode} corresponds to a stage that was skipped via conditional block.
+     * @param node
+     * @return
+     */
+    private static boolean wasStageSkippedForConditional(FlowNode node) {
         TagsAction tags = node.getAction(TagsAction.class);
         return tags != null && StageStatus.getSkippedForConditional().equals(tags.getTagValue(StageStatus.TAG_NAME));
     }
