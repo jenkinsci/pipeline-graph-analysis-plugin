@@ -32,7 +32,6 @@ import com.google.common.collect.Sets;
 import hudson.model.Action;
 import hudson.model.Result;
 import org.apache.commons.lang.StringUtils;
-import org.jenkinsci.plugins.pipeline.StageStatus;
 import org.jenkinsci.plugins.workflow.actions.ErrorAction;
 import org.jenkinsci.plugins.workflow.actions.NotExecutedNodeAction;
 import org.jenkinsci.plugins.workflow.actions.QueueItemAction;

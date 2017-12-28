@@ -114,11 +114,6 @@
             <version>2.2</version>
         </dependency>
         <dependency>
-            <groupId>org.jenkinsci.plugins</groupId>
-            <artifactId>pipeline-stage-tags-metadata</artifactId>
-            <version>1.2.5</version>
-        </dependency>
-        <dependency>
             <groupId>org.jenkins-ci.plugins.workflow</groupId>
             <artifactId>workflow-support</artifactId>
             <version>2.14</version>
