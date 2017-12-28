@@ -56,7 +56,6 @@
         <dependency>
             <groupId>org.jenkins-ci.plugins.workflow</groupId>
             <artifactId>workflow-job</artifactId>
-            <!-- needed to avoid ClassNotFoundException for PipelineTriggersJobProperty in tests -->
             <version>2.4</version>
         </dependency>
         <dependency>
