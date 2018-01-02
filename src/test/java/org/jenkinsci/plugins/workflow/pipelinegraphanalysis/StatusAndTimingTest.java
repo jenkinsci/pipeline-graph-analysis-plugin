@@ -36,7 +36,9 @@ import org.jenkinsci.plugins.workflow.cps.CpsFlowExecution;
 import org.jenkinsci.plugins.workflow.flow.FlowExecution;
 import org.jenkinsci.plugins.workflow.graph.BlockStartNode;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
+import org.jenkinsci.plugins.workflow.graphanalysis.FlowChunkWithContext;
 import org.jenkinsci.plugins.workflow.graphanalysis.ForkScanner;
+import org.jenkinsci.plugins.workflow.graphanalysis.MemoryFlowChunk;
 import org.jenkinsci.plugins.workflow.graphanalysis.NoOpChunkFinder;
 import org.jenkinsci.plugins.workflow.graphanalysis.TestVisitor;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
@@ -710,5 +712,61 @@ public class StatusAndTimingTest {
 
         SemaphoreStep.success("wait-a/1", null);
         j.assertBuildStatusSuccess(j.waitForCompletion(b1));
+    }
+
+    @Test
+    @Issue("JENKINS-47219")
+    public void parallelStagesOneSkipped() throws Exception {
+        WorkflowJob job = j.jenkins.createProject(WorkflowJob.class, "parallel stages, one skipped job");
+        job.setDefinition(new CpsFlowDefinition("" +
+                "pipeline { \n" +
+                "   agent any \n" +
+                "   stages { \n" +
+                "       stage('Run Tests') { \n"+
+                "           parallel { \n" +
+                "               stage('Test on Windows') { \n" +
+                "                   when { \n" +
+                "                       branch 'cake' \n" +
+                "                   } \n"+
+                "                   steps { \n"+
+                "                       echo 'hello world' \n"+
+                "                   } \n"+
+                "               } \n"+
+                "               stage('Test on Linux') { \n" +
+                "                   steps { \n"+
+                "                       echo 'hello world' \n"+
+                "                   } \n"+
+                "               } \n"+
+                "           } \n"+
+                "       } \n"+
+                "   } \n"+
+                "} \n",
+                false));
+
+        WorkflowRun build = j.assertBuildStatusSuccess(job.scheduleBuild2(0));
+
+        ForkScanner scan = new ForkScanner();
+        scan.setup(build.getExecution().getCurrentHeads());
+        StageTest.CollectingChunkVisitor visitor = new StageTest.CollectingChunkVisitor();
+        scan.visitSimpleChunks(visitor, new StageChunkFinder());
+        ArrayList<MemoryFlowChunk> stages = visitor.getChunks();
+
+        Assert.assertEquals(3, stages.size());
+
+        MemoryFlowChunk chunkTests = stages.get(0);
+        Assert.assertEquals("Run Tests", chunkTests.getFirstNode().getDisplayName());
+        Assert.assertEquals(GenericStatus.SUCCESS, getStatusForChunk(build, chunkTests));
+
+        MemoryFlowChunk chunkWindows = stages.get(1);
+        Assert.assertEquals("Test on Windows", chunkWindows.getFirstNode().getDisplayName());
+        Assert.assertEquals(GenericStatus.NOT_EXECUTED, getStatusForChunk(build, chunkWindows));
+
+        MemoryFlowChunk chunkLinux = stages.get(2);
+        Assert.assertEquals("Test on Linux", chunkLinux.getFirstNode().getDisplayName());
+        Assert.assertEquals(GenericStatus.SUCCESS, getStatusForChunk(build, chunkLinux));
+    }
+
+    private static GenericStatus getStatusForChunk(WorkflowRun run, FlowChunkWithContext chunk) {
+        return StatusAndTiming.computeChunkStatus2(run, chunk.getNodeBefore(), chunk.getFirstNode(), chunk.getLastNode(), chunk.getNodeAfter());
     }
 }

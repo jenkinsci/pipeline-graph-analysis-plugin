@@ -35,6 +35,7 @@ import org.apache.commons.lang.StringUtils;
 import org.jenkinsci.plugins.workflow.actions.ErrorAction;
 import org.jenkinsci.plugins.workflow.actions.NotExecutedNodeAction;
 import org.jenkinsci.plugins.workflow.actions.QueueItemAction;
+import org.jenkinsci.plugins.workflow.actions.TagsAction;
 import org.jenkinsci.plugins.workflow.actions.ThreadNameAction;
 import org.jenkinsci.plugins.workflow.actions.TimingAction;
 import org.jenkinsci.plugins.workflow.cps.nodes.StepStartNode;
@@ -58,7 +59,6 @@ import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -242,7 +242,7 @@ public class StatusAndTiming {
         if (exec == null) {
             return null;
         }
-        if (!NotExecutedNodeAction.isExecuted(lastNode)) {
+        if (!NotExecutedNodeAction.isExecuted(lastNode) || wasStageSkippedForConditional(firstNode)) {
             return GenericStatus.NOT_EXECUTED;
         }
         boolean isLastChunk = after == null || exec.isCurrentHead(lastNode);
@@ -297,6 +297,16 @@ public class StatusAndTiming {
 
         // Previous chunk before end. If flow continued beyond this, it didn't fail.
         return (run.getResult() == Result.UNSTABLE) ? GenericStatus.UNSTABLE : GenericStatus.SUCCESS;
+    }
+
+    /**
+     * Check if the specified {@link FlowNode} corresponds to a stage that was skipped via conditional block.
+     * @param node
+     * @return
+     */
+    private static boolean wasStageSkippedForConditional(FlowNode node) {
+        TagsAction tags = node.getAction(TagsAction.class);
+        return tags != null && StageStatus.getSkippedForConditional().equals(tags.getTagValue(StageStatus.TAG_NAME));
     }
 
     @CheckForNull
