@@ -138,7 +138,7 @@ public class StatusAndTiming {
      * Check that all the flownodes &amp; run describe the same pipeline run/execution
      * @param run Run that nodes must belong to
      * @param nodes Nodes to match to run
-     * @throws IllegalArgumentException For the first flownode that doesn't belong to the FlowExectuon of run
+     * @throws IllegalArgumentException For the first flownode that doesn't belong to the FlowExecution of run
      */
     public static void verifySameRun(@Nonnull WorkflowRun run, @CheckForNull FlowNode... nodes) throws IllegalArgumentException {
         if (nodes == null || nodes.length == 0) {
