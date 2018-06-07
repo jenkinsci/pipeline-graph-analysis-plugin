@@ -136,7 +136,6 @@
           <artifactId>ssh-credentials</artifactId>
           <version>1.13</version>
           <scope>test</scope>
-          <classifier>tests</classifier>
         </dependency>
         <dependency>
             <groupId>org.jenkinsci.plugins</groupId>
