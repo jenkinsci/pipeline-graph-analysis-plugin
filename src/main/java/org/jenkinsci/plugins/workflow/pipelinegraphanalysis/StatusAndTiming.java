@@ -67,6 +67,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeoutException;
 
 /**
  * Provides common, comprehensive set of APIs for doing status and timing computations on pieces of a pipeline execution.
@@ -163,7 +164,18 @@ public class StatusAndTiming {
         // Logic borrowed from Pipeline Stage View plugin, RuneEx
         InputAction inputAction = run.getAction(InputAction.class);
         if (inputAction != null) {
-            List<InputStepExecution> executions = inputAction.getExecutions();
+            List<InputStepExecution> executions = null;
+            try {
+                executions = inputAction.getExecutions();
+            } catch (InterruptedException|TimeoutException ex) {
+                // Retry on timeout
+                try {
+                    executions = inputAction.getExecutions();
+                } catch (InterruptedException|TimeoutException ex2) {
+                    // Assume we can't handle it, and default to most common state of not being an input step.
+                    executions = null;
+                }
+            }
             if (executions != null && !executions.isEmpty()) {
                 return true;
             }
