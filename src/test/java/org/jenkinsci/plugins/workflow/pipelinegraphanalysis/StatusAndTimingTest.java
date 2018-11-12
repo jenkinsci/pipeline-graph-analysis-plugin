@@ -210,11 +210,11 @@ public class StatusAndTimingTest {
                 run, null, exec.getNode("2"), exec.getNode("7"), null));
 
         // Start through to failure point
-        assertEquals(GenericStatus.FAILURE, StatusAndTiming.computeChunkStatus2(
+        assertEquals(GenericStatus.ABORTED, StatusAndTiming.computeChunkStatus2(
                 run, null, exec.getNode("2"), exec.getNode("6"), exec.getNode("7")));
 
         // All but first/last node
-        assertEquals(GenericStatus.FAILURE, StatusAndTiming.computeChunkStatus2(
+        assertEquals(GenericStatus.ABORTED, StatusAndTiming.computeChunkStatus2(
                 run, exec.getNode("2"), exec.getNode("3"), exec.getNode("6"), exec.getNode("7")));
 
         // Before failure node
@@ -271,7 +271,7 @@ public class StatusAndTimingTest {
                 run, null, exec.getNode("2"), exec.getNode("14"), null));
 
         // Failing branch
-        assertEquals(GenericStatus.FAILURE, StatusAndTiming.computeChunkStatus2(
+        assertEquals(GenericStatus.ABORTED, StatusAndTiming.computeChunkStatus2(
                 run, exec.getNode("4"), exec.getNode("7"), exec.getNode("10"), exec.getNode("13")));
 
         // Passing branch
@@ -290,11 +290,11 @@ public class StatusAndTimingTest {
         List<String> outputBranchList = new ArrayList<String>(branchStatuses.keySet());
         Collections.sort(outputBranchList);
         Assert.assertArrayEquals(branches, outputBranchList.toArray());
-        assertEquals(GenericStatus.FAILURE, branchStatuses.get("fail"));
+        assertEquals(GenericStatus.ABORTED, branchStatuses.get("fail"));
         assertEquals(GenericStatus.SUCCESS, branchStatuses.get("success"));
 
         // Verify that overall status returns as failure
-        assertEquals(GenericStatus.FAILURE, StatusAndTiming.condenseStatus(branchStatuses.values()));
+        assertEquals(GenericStatus.ABORTED, StatusAndTiming.condenseStatus(branchStatuses.values()));
 
         // Check timing computation for individual branches
         long[] simulatedPauses = {50L, 5L}; // success, fail

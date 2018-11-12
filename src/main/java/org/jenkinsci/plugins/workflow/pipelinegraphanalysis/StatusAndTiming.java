@@ -49,6 +49,7 @@ import org.jenkinsci.plugins.workflow.graphanalysis.DepthFirstScanner;
 import org.jenkinsci.plugins.workflow.graphanalysis.MemoryFlowChunk;
 import org.jenkinsci.plugins.workflow.graphanalysis.ParallelMemoryFlowChunk;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
+import org.jenkinsci.plugins.workflow.steps.FlowInterruptedException;
 import org.jenkinsci.plugins.workflow.support.actions.PauseAction;
 import org.jenkinsci.plugins.workflow.support.steps.input.InputAction;
 import org.jenkinsci.plugins.workflow.support.steps.input.InputStepExecution;
@@ -303,8 +304,18 @@ public class StatusAndTiming {
         }
         ErrorAction err = lastNode.getError();
         if (err != null) {
-            // If next node lacks and ErrorAction, the error was caught in a catch block
-            return (after.getError() == null) ? GenericStatus.SUCCESS : GenericStatus.FAILURE;
+            ErrorAction afterError = after.getError();
+            if(afterError != null) {
+                Throwable rootCause = afterError.getError();
+                if(rootCause instanceof FlowInterruptedException || rootCause instanceof hudson.AbortException) {
+                    return GenericStatus.ABORTED;
+                } else {
+                    return GenericStatus.FAILURE;
+                }
+            } else {
+                // If next node lacks an ErrorAction, the error was caught in a catch block
+                return GenericStatus.SUCCESS;
+            }
         }
 
         // Previous chunk before end. If flow continued beyond this, it didn't fail.
