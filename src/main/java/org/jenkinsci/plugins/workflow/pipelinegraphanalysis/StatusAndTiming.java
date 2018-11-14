@@ -307,7 +307,7 @@ public class StatusAndTiming {
             ErrorAction afterError = after.getError();
             if(afterError != null) {
                 Throwable rootCause = afterError.getError();
-                if(rootCause instanceof FlowInterruptedException || rootCause instanceof hudson.AbortException) {
+                if (rootCause instanceof FlowInterruptedException) {
                     return GenericStatus.ABORTED;
                 } else {
                     return GenericStatus.FAILURE;
