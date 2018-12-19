@@ -309,7 +309,7 @@ public class StatusAndTiming {
         }
 
         // Previous chunk before end. If flow continued beyond this, it didn't fail.
-        return (run.getResult() == Result.UNSTABLE) ? GenericStatus.UNSTABLE : GenericStatus.SUCCESS;
+        return GenericStatus.SUCCESS;
     }
 
     /**
