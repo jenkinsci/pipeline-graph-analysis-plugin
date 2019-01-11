@@ -87,8 +87,10 @@ public enum GenericStatus {
             return GenericStatus.FAILURE;
         } else if (result == Result.UNSTABLE ) {
             return GenericStatus.UNSTABLE;
-        } else {
+        } else if (result == Result.SUCCESS ) {
             return GenericStatus.SUCCESS;
+        } else {
+            return GenericStatus.NOT_EXECUTED;
         }
     }
 }
