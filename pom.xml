@@ -12,7 +12,7 @@
 
     <groupId>org.jenkins-ci.plugins</groupId>
     <artifactId>pipeline-graph-analysis</artifactId>
-    <version>1.10-SNAPSHOT</version>
+    <version>${revision}${changelist}</version>
     <packaging>hpi</packaging>
     <name>Pipeline Graph Analysis Plugin</name>
     <url>https://wiki.jenkins-ci.org/display/JENKINS/Pipeline+Graph+Analysis+Plugin</url>
@@ -21,7 +21,7 @@
         <connection>scm:git:git://github.com/jenkinsci/${project.artifactId}-plugin.git</connection>
         <developerConnection>scm:git:git@github.com:jenkinsci/${project.artifactId}-plugin.git</developerConnection>
         <url>https://github.com/jenkinsci/${project.artifactId}-plugin/</url>
-        <tag>HEAD</tag>
+        <tag>${scmTag}</tag>
     </scm>
 
     <licenses>
@@ -33,6 +33,8 @@
     </licenses>
 
     <properties>
+        <revision>1.10</revision>
+        <changelist>-SNAPSHOT</changelist>
         <jenkins.version>2.138.4</jenkins.version>
         <java.level>8</java.level>
         <workflow-api.version>2.33</workflow-api.version>
