@@ -289,17 +289,7 @@ public class StatusAndTiming {
             } else {
                 // Final chunk on completed build
                 Result r = run.getResult();
-                if (r == Result.NOT_BUILT) {
-                    return GenericStatus.NOT_EXECUTED;
-                } else if (r == Result.ABORTED) {
-                    return GenericStatus.ABORTED;
-                } else if (r == Result.FAILURE ) {
-                    return GenericStatus.FAILURE;
-                } else if (r == Result.UNSTABLE ) {
-                    return GenericStatus.UNSTABLE;
-                } else {
-                    return GenericStatus.SUCCESS;
-                }
+                return GenericStatus.fromResult(r);
             }
         }
         ErrorAction err = lastNode.getError();
@@ -308,7 +298,7 @@ public class StatusAndTiming {
             if(afterError != null) {
                 Throwable rootCause = afterError.getError();
                 if (rootCause instanceof FlowInterruptedException) {
-                    return GenericStatus.ABORTED;
+                    return GenericStatus.fromResult(((FlowInterruptedException) rootCause).getResult());
                 } else {
                     return GenericStatus.FAILURE;
                 }
