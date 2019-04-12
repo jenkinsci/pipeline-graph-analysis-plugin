@@ -157,7 +157,7 @@ public class StatusAndTimingTest {
         // Custom unstable status
         run.setResult(Result.UNSTABLE);
         status = StatusAndTiming.computeChunkStatus2(run, null, n[0], n[1], n[2]);
-        assertEquals(GenericStatus.SUCCESS, status);
+        assertEquals(GenericStatus.UNSTABLE, status);
 
         // Failure should assume last chunk ran is where failure happened
         run.setResult(Result.FAILURE);
