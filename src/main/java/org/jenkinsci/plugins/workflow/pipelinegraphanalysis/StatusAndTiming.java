@@ -294,17 +294,11 @@ public class StatusAndTiming {
         }
         ErrorAction err = lastNode.getError();
         if (err != null) {
-            ErrorAction afterError = after.getError();
-            if(afterError != null) {
-                Throwable rootCause = afterError.getError();
-                if (rootCause instanceof FlowInterruptedException) {
-                    return GenericStatus.fromResult(((FlowInterruptedException) rootCause).getResult());
-                } else {
-                    return GenericStatus.FAILURE;
-                }
+            Throwable rootCause = err.getError();
+            if (rootCause instanceof FlowInterruptedException) {
+                return GenericStatus.fromResult(((FlowInterruptedException) rootCause).getResult());
             } else {
-                // If next node lacks an ErrorAction, the error was caught in a catch block
-                return GenericStatus.SUCCESS;
+                return GenericStatus.FAILURE;
             }
         }
 
