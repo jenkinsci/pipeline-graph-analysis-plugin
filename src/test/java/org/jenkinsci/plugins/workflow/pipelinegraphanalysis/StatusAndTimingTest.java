@@ -34,12 +34,13 @@ import org.jenkinsci.plugins.workflow.actions.TimingAction;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowExecution;
 import org.jenkinsci.plugins.workflow.flow.FlowExecution;
+import org.jenkinsci.plugins.workflow.graph.BlockEndNode;
 import org.jenkinsci.plugins.workflow.graph.BlockStartNode;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
-import org.jenkinsci.plugins.workflow.graphanalysis.FlowChunkWithContext;
 import org.jenkinsci.plugins.workflow.graphanalysis.ForkScanner;
 import org.jenkinsci.plugins.workflow.graphanalysis.MemoryFlowChunk;
 import org.jenkinsci.plugins.workflow.graphanalysis.NoOpChunkFinder;
+import org.jenkinsci.plugins.workflow.graphanalysis.StandardChunkVisitor;
 import org.jenkinsci.plugins.workflow.graphanalysis.TestVisitor;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
@@ -745,28 +746,209 @@ public class StatusAndTimingTest {
 
         WorkflowRun build = j.assertBuildStatusSuccess(job.scheduleBuild2(0));
 
-        ForkScanner scan = new ForkScanner();
-        scan.setup(build.getExecution().getCurrentHeads());
-        StageTest.CollectingChunkVisitor visitor = new StageTest.CollectingChunkVisitor();
-        scan.visitSimpleChunks(visitor, new StageChunkFinder());
-        ArrayList<MemoryFlowChunk> stages = visitor.getChunks();
+        List<MemoryFlowChunk> stages = getStages(build.getExecution());
 
         Assert.assertEquals(3, stages.size());
 
         MemoryFlowChunk chunkTests = stages.get(0);
         Assert.assertEquals("Run Tests", chunkTests.getFirstNode().getDisplayName());
-        Assert.assertEquals(GenericStatus.SUCCESS, getStatusForChunk(build, chunkTests));
+        Assert.assertEquals(GenericStatus.SUCCESS, StatusAndTiming.computeChunkStatus2(build, chunkTests));
 
         MemoryFlowChunk chunkWindows = stages.get(1);
         Assert.assertEquals("Test on Windows", chunkWindows.getFirstNode().getDisplayName());
-        Assert.assertEquals(GenericStatus.NOT_EXECUTED, getStatusForChunk(build, chunkWindows));
+        Assert.assertEquals(GenericStatus.NOT_EXECUTED, StatusAndTiming.computeChunkStatus2(build, chunkWindows));
 
         MemoryFlowChunk chunkLinux = stages.get(2);
         Assert.assertEquals("Test on Linux", chunkLinux.getFirstNode().getDisplayName());
-        Assert.assertEquals(GenericStatus.SUCCESS, getStatusForChunk(build, chunkLinux));
+        Assert.assertEquals(GenericStatus.SUCCESS, StatusAndTiming.computeChunkStatus2(build, chunkLinux));
     }
 
-    private static GenericStatus getStatusForChunk(WorkflowRun run, FlowChunkWithContext chunk) {
-        return StatusAndTiming.computeChunkStatus2(run, chunk.getNodeBefore(), chunk.getFirstNode(), chunk.getLastNode(), chunk.getNodeAfter());
+    @Test
+    public void catchOutsideFailingStage() throws Exception {
+        WorkflowJob job = j.jenkins.createProject(WorkflowJob.class, "catchOutsideFailingStage");
+        job.setDefinition(new CpsFlowDefinition(
+                "try {\n" +
+                "  stage('throws-error') {\n" +
+                "    error('oops')\n" +
+                "  }\n" +
+                "} catch(err) {\n" +
+                "  echo('caught error')\n" +
+                "}\n", true));
+        WorkflowRun run = j.assertBuildStatusSuccess(job.scheduleBuild2(0));
+        FlowExecution exec = run.getExecution();
+        /**
+         * Node dump follows, format:
+         * [ID]{parent,ids} flowNodeClassName stepDisplayName [st=startId if a block end node]
+         *
+         * [2]{}FlowStartNode Start of Pipeline
+         * [3]{2}StepStartNode Stage : Start
+         * [4]{3}StepStartNode throws-error
+         * [5]{4}StepAtomNode Error signal
+         * [6]{5}StepEndNode Stage : Body : End  [st=4]
+         * [7]{6}StepEndNode Stage : End  [st=3]
+         * [8]{7}StepAtomNode Print Message
+         * [9]{8}FlowEndNode End of Pipeline  [st=2]
+         */
+        List<MemoryFlowChunk> stages = getStages(exec);
+        assertEquals(1, stages.size());
+        MemoryFlowChunk stage = stages.get(0);
+        assertEquals(exec.getNode("3"), stage.getNodeBefore());
+        assertEquals(exec.getNode("4"), stage.getFirstNode());
+        assertEquals(exec.getNode("6"), stage.getLastNode());
+        assertEquals(exec.getNode("7"), stage.getNodeAfter());
+        assertEquals(GenericStatus.FAILURE, StatusAndTiming.computeChunkStatus2(run, stage));
+    }
+
+    @Test
+    public void parallelFailFast() throws Exception {
+        WorkflowJob job = j.jenkins.createProject(WorkflowJob.class, "parallelFailFast");
+        job.setDefinition(new CpsFlowDefinition(
+                "parallel failFast: true,\n" +
+                "  aborts: {\n" +
+                "    sleep 5\n" +
+                "  },\n" +
+                "  fails: {\n" +
+                "    sleep 1\n" +
+                "    error('oops')\n" +
+                "  },\n" +
+                "  succeeds: {\n" +
+                "    echo 'success'" +
+                "  }", true));
+        WorkflowRun run = j.assertBuildStatus(Result.FAILURE, job.scheduleBuild2(0));
+        FlowExecution exec = run.getExecution();
+        /**
+         * Node dump follows, format:
+         * [ID]{parent,ids} flowNodeClassName stepDisplayName [st=startId if a block end node]
+         *
+         * [2]{}FlowStartNode Start of Pipeline
+         * [3]{2}StepStartNode Execute in parallel : Start
+         * [6]{3}StepStartNode Branch: aborts
+         * [7]{3}StepStartNode Branch: fails
+         * [8]{3}StepStartNode Branch: succeeds
+         * [9]{6}StepAtomNode Sleep
+         * [10]{7}StepAtomNode Sleep
+         * [11]{8}StepAtomNode Print Message
+         * [12]{11}StepEndNode Execute in parallel : Body : End  [st=8]
+         * [13]{10}StepAtomNode Error signal
+         * [14]{13}StepEndNode Execute in parallel : Body : End  [st=7]
+         * [15]{9}StepEndNode Execute in parallel : Body : End  [st=6]
+         * [16]{15,14,12}StepEndNode Execute in parallel : End  [st=3]
+         * [17]{16}FlowEndNode End of Pipeline  [st=2]
+         */
+        List<MemoryFlowChunk> stages = getStages(exec);
+        assertEquals(0, stages.size());
+        List<MemoryFlowChunk> branches = getParallelBranches(exec);
+        assertEquals(3, branches.size());
+        {
+            MemoryFlowChunk succeededBranch = branches.get(0);
+            assertEquals(exec.getNode("3"), succeededBranch.getNodeBefore());
+            assertEquals(exec.getNode("8"), succeededBranch.getFirstNode());
+            assertEquals(exec.getNode("12"), succeededBranch.getLastNode());
+            assertEquals(exec.getNode("16"), succeededBranch.getNodeAfter());
+            assertEquals(GenericStatus.SUCCESS, StatusAndTiming.computeChunkStatus2(run, succeededBranch));
+        }
+        {
+            MemoryFlowChunk failedBranch = branches.get(1);
+            assertEquals(exec.getNode("3"), failedBranch.getNodeBefore());
+            assertEquals(exec.getNode("7"), failedBranch.getFirstNode());
+            assertEquals(exec.getNode("14"), failedBranch.getLastNode());
+            assertEquals(exec.getNode("16"), failedBranch.getNodeAfter());
+            assertEquals(GenericStatus.FAILURE, StatusAndTiming.computeChunkStatus2(run, failedBranch));
+        }
+        {
+            MemoryFlowChunk abortedBranch = branches.get(2);
+            assertEquals(exec.getNode("3"), abortedBranch.getNodeBefore());
+            assertEquals(exec.getNode("6"), abortedBranch.getFirstNode());
+            assertEquals(exec.getNode("15"), abortedBranch.getLastNode());
+            assertEquals(exec.getNode("16"), abortedBranch.getNodeAfter());
+            assertEquals(GenericStatus.ABORTED, StatusAndTiming.computeChunkStatus2(run, abortedBranch));
+        }
+    }
+
+    @Test
+    public void parallel() throws Exception {
+        WorkflowJob job = j.jenkins.createProject(WorkflowJob.class, "parallel");
+        job.setDefinition(new CpsFlowDefinition(
+                "parallel fails: {\n" +
+                "  error('oops')\n" +
+                "},\n" +
+                "succeeds: {\n" +
+                "  echo('succeeds')" +
+                "}\n", true));
+        WorkflowRun run = j.assertBuildStatus(Result.FAILURE, job.scheduleBuild2(0));
+        FlowExecution exec = run.getExecution();
+        /**
+         * Node dump follows, format:
+         * [ID]{parent,ids} flowNodeClassName stepDisplayName [st=startId if a block end node]
+         *
+         * [2]{}FlowStartNode Start of Pipeline
+         * [3]{2}StepStartNode Execute in parallel : Start
+         * [5]{3}StepStartNode Branch: fails
+         * [6]{3}StepStartNode Branch: succeeds
+         * [7]{5}StepAtomNode Error signal
+         * [8]{7}StepEndNode Execute in parallel : Body : End  [st=5]
+         * [9]{6}StepAtomNode Print Message
+         * [10]{9}StepEndNode Execute in parallel : Body : End  [st=6]
+         * [11]{8,10}StepEndNode Execute in parallel : End  [st=3]
+         * [12]{11}FlowEndNode End of Pipeline  [st=2]
+         */
+        List<MemoryFlowChunk> stages = getStages(exec);
+        assertEquals(0, stages.size());
+        List<MemoryFlowChunk> branches = getParallelBranches(exec);
+        assertEquals(2, branches.size());
+        {
+            MemoryFlowChunk failedBranch = branches.get(0);
+            assertEquals(exec.getNode("3"), failedBranch.getNodeBefore());
+            assertEquals(exec.getNode("6"), failedBranch.getFirstNode());
+            assertEquals(exec.getNode("10"), failedBranch.getLastNode());
+            assertEquals(exec.getNode("11"), failedBranch.getNodeAfter());
+            assertEquals(GenericStatus.SUCCESS, StatusAndTiming.computeChunkStatus2(run, failedBranch));
+        }
+        {
+            MemoryFlowChunk abortedBranch = branches.get(1);
+            assertEquals(exec.getNode("3"), abortedBranch.getNodeBefore());
+            assertEquals(exec.getNode("5"), abortedBranch.getFirstNode());
+            assertEquals(exec.getNode("8"), abortedBranch.getLastNode());
+            assertEquals(exec.getNode("11"), abortedBranch.getNodeAfter());
+            assertEquals(GenericStatus.FAILURE, StatusAndTiming.computeChunkStatus2(run, abortedBranch));
+        }
+    }
+
+    private static List<MemoryFlowChunk> getStages(FlowExecution execution) {
+        StageTest.CollectingChunkVisitor visitor = new StageTest.CollectingChunkVisitor();
+        ForkScanner.visitSimpleChunks(execution.getCurrentHeads(), visitor, new StageChunkFinder());
+        return visitor.getChunks();
+    }
+
+    private static List<MemoryFlowChunk> getParallelBranches(FlowExecution execution) {
+        CollectingParallelBranchesVisitor visitor = new CollectingParallelBranchesVisitor();
+        ForkScanner.visitSimpleChunks(execution.getCurrentHeads(), visitor, new StageChunkFinder());
+        return visitor.getParallelBranches();
+    }
+
+    /**
+     * Visitor that collects parallel branches into chunks in a way similar to what Blue Ocean does.
+     * This visitor should only be used for pipelines that have finished executing.
+     */
+    private static class CollectingParallelBranchesVisitor extends StandardChunkVisitor {
+        List<MemoryFlowChunk> parallelBranches = new ArrayList<>();
+
+        /**
+         * For each chunk, {@link MemoryFlowChunk#getNodeBefore()} is the parallel start node (fan-out),
+         * {@link MemoryFlowChunk#getFirstNode()} is the branch start node, {@link MemoryFlowChunk#getLastNode()} is the
+         * branch end node, and {@link MemoryFlowChunk#getNodeAfter()} is the parallel end node (fan-in).
+         */
+        public List<MemoryFlowChunk> getParallelBranches() {
+            return new ArrayList<>(parallelBranches);
+        }
+
+        @Override
+        public void parallelBranchEnd(FlowNode parallelStart, FlowNode branchEnd, ForkScanner scanner) {
+            assert branchEnd instanceof BlockEndNode;
+            FlowNode branchStart = ((BlockEndNode)branchEnd).getStartNode();
+            assert parallelStart instanceof BlockStartNode;
+            FlowNode parallelEnd = ((BlockStartNode)parallelStart).getEndNode();
+            parallelBranches.add(new MemoryFlowChunk(parallelStart, branchStart, branchEnd, parallelEnd));
+        }
     }
 }
