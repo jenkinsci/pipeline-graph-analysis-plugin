@@ -158,7 +158,7 @@ public class StatusAndTimingTest {
         // Custom unstable status
         run.setResult(Result.UNSTABLE);
         status = StatusAndTiming.computeChunkStatus2(run, null, n[0], n[1], n[2]);
-        assertEquals(GenericStatus.UNSTABLE, status);
+        assertEquals(GenericStatus.SUCCESS, status); // Overall build status is ignored for chunks.
 
         // Failure should assume last chunk ran is where failure happened
         run.setResult(Result.FAILURE);
@@ -911,6 +911,78 @@ public class StatusAndTimingTest {
             assertEquals(exec.getNode("8"), abortedBranch.getLastNode());
             assertEquals(exec.getNode("11"), abortedBranch.getNodeAfter());
             assertEquals(GenericStatus.FAILURE, StatusAndTiming.computeChunkStatus2(run, abortedBranch));
+        }
+    }
+
+    @Test
+    public void unstableWithWarningAction() throws Exception {
+        WorkflowJob job = j.jenkins.createProject(WorkflowJob.class, "unstable");
+        job.setDefinition(new CpsFlowDefinition(
+                "stage('unstable') {\n" +
+                "  echo('foo')\n" +
+                "  unstable('oops')\n" +
+                "  echo('foo')\n" +
+                "}\n" +
+                "stage('success') {\n" +
+                "  echo('no problem')" +
+                "}\n" +
+                "stage('failure') {\n" +
+                "  unstable('second oops')\n" +
+                "  error('failure')\n" +
+                "}\n", true));
+        WorkflowRun run = j.assertBuildStatus(Result.FAILURE, job.scheduleBuild2(0));
+        StatusAndTiming.printNodes(run, false, false);
+        FlowExecution exec = run.getExecution();
+        /**
+         * Node dump follows, format:
+         * [ID]{parent,ids} flowNodeClassName stepDisplayName [st=startId if a block end node]
+         *
+         * [2]{}FlowStartNode Start of Pipeline
+         * [3]{2}StepStartNode Stage : Start
+         * [4]{3}StepStartNode unstable
+         * [5]{4}StepAtomNode Print Message
+         * [6]{5}StepAtomNode UnstableStep
+         * [7]{6}StepAtomNode Print Message
+         * [8]{7}StepEndNode Stage : Body : End  [st=4]
+         * [9]{8}StepEndNode Stage : End  [st=3]
+         * [10]{9}StepStartNode Stage : Start
+         * [11]{10}StepStartNode success
+         * [12]{11}StepAtomNode Print Message
+         * [13]{12}StepEndNode Stage : Body : End  [st=11]
+         * [14]{13}StepEndNode Stage : End  [st=10]
+         * [15]{14}StepStartNode Stage : Start
+         * [16]{15}StepStartNode failure
+         * [17]{16}StepAtomNode UnstableStep
+         * [18]{17}StepAtomNode Error signal
+         * [19]{18}StepEndNode Stage : Body : End  [st=16]
+         * [20]{19}StepEndNode Stage : End  [st=15]
+         * [21]{20}FlowEndNode End of Pipeline  [st=2]
+         */
+        List<MemoryFlowChunk> stages = getStages(exec);
+        assertEquals(3, stages.size());
+        {
+            MemoryFlowChunk unstable = stages.get(0);
+            assertEquals(exec.getNode("3"), unstable.getNodeBefore());
+            assertEquals(exec.getNode("4"), unstable.getFirstNode());
+            assertEquals(exec.getNode("8"), unstable.getLastNode());
+            assertEquals(exec.getNode("9"), unstable.getNodeAfter());
+            assertEquals(GenericStatus.UNSTABLE, StatusAndTiming.computeChunkStatus2(run, unstable));
+        }
+        {
+            MemoryFlowChunk success = stages.get(1);
+            assertEquals(exec.getNode("10"), success.getNodeBefore());
+            assertEquals(exec.getNode("11"), success.getFirstNode());
+            assertEquals(exec.getNode("13"), success.getLastNode());
+            assertEquals(exec.getNode("14"), success.getNodeAfter());
+            assertEquals(GenericStatus.SUCCESS, StatusAndTiming.computeChunkStatus2(run, success));
+        }
+        {
+            MemoryFlowChunk failure = stages.get(2);
+            assertEquals(exec.getNode("15"), failure.getNodeBefore());
+            assertEquals(exec.getNode("16"), failure.getFirstNode());
+            assertEquals(exec.getNode("19"), failure.getLastNode());
+            assertEquals(exec.getNode("20"), failure.getNodeAfter());
+            assertEquals(GenericStatus.FAILURE, StatusAndTiming.computeChunkStatus2(run, failure));
         }
     }
 

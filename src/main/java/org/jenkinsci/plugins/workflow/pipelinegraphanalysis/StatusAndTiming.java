@@ -38,6 +38,7 @@ import org.jenkinsci.plugins.workflow.actions.QueueItemAction;
 import org.jenkinsci.plugins.workflow.actions.TagsAction;
 import org.jenkinsci.plugins.workflow.actions.ThreadNameAction;
 import org.jenkinsci.plugins.workflow.actions.TimingAction;
+import org.jenkinsci.plugins.workflow.actions.WarningAction;
 import org.jenkinsci.plugins.workflow.cps.nodes.StepStartNode;
 import org.jenkinsci.plugins.workflow.flow.FlowExecution;
 import org.jenkinsci.plugins.workflow.graph.BlockEndNode;
@@ -301,9 +302,27 @@ public class StatusAndTiming {
                 return GenericStatus.FAILURE;
             }
         }
+        WarningAction warning = findWarningBetween(firstNode, lastNode);
+        if (warning != null) {
+            return GenericStatus.UNSTABLE;
+        }
 
         // Previous chunk before end. If flow continued beyond this, it didn't fail.
-        return (run.getResult() == Result.UNSTABLE) ? GenericStatus.UNSTABLE : GenericStatus.SUCCESS;
+        return GenericStatus.SUCCESS;
+    }
+
+    private static @CheckForNull WarningAction findWarningBetween(@Nonnull FlowNode start, @Nonnull FlowNode end) {
+        // TODO: Cache the result?
+        FlowNode found = new DepthFirstScanner().findFirstMatch(
+                Collections.singletonList(end),
+                Collections.singletonList(start),
+                tempNode -> {
+                    return start.getId().equals(tempNode.getEnclosingId()) && tempNode.getPersistentAction(WarningAction.class) != null;
+                });
+        if (found != null) {
+            return found.getPersistentAction(WarningAction.class);
+        }
+        return null;
     }
 
     /**
