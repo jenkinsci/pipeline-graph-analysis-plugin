@@ -800,6 +800,7 @@ public class StatusAndTimingTest {
     }
 
     @Test
+    @Issue("JENKINS-43292")
     public void parallelFailFast() throws Exception {
         WorkflowJob job = j.jenkins.createProject(WorkflowJob.class, "parallelFailFast");
         job.setDefinition(new CpsFlowDefinition(
@@ -866,6 +867,7 @@ public class StatusAndTimingTest {
     }
 
     @Test
+    @Issue("JENKINS-43292")
     public void parallel() throws Exception {
         WorkflowJob job = j.jenkins.createProject(WorkflowJob.class, "parallel");
         job.setDefinition(new CpsFlowDefinition(
@@ -915,6 +917,7 @@ public class StatusAndTimingTest {
     }
 
     @Test
+    @Issue("JENKINS-39203")
     public void unstableWithWarningAction() throws Exception {
         WorkflowJob job = j.jenkins.createProject(WorkflowJob.class, "unstable");
         job.setDefinition(new CpsFlowDefinition(
@@ -931,7 +934,6 @@ public class StatusAndTimingTest {
                 "  error('failure')\n" +
                 "}\n", true));
         WorkflowRun run = j.assertBuildStatus(Result.FAILURE, job.scheduleBuild2(0));
-        StatusAndTiming.printNodes(run, false, false);
         FlowExecution exec = run.getExecution();
         /**
          * Node dump follows, format:
@@ -983,6 +985,52 @@ public class StatusAndTimingTest {
             assertEquals(exec.getNode("19"), failure.getLastNode());
             assertEquals(exec.getNode("20"), failure.getNodeAfter());
             assertEquals(GenericStatus.FAILURE, StatusAndTiming.computeChunkStatus2(run, failure));
+        }
+    }
+
+    @Test
+    @Issue("JENKINS-39203")
+    public void unstableInBlockScopeStep() throws Exception {
+        WorkflowJob job = j.jenkins.createProject(WorkflowJob.class, "unstable");
+        job.setDefinition(new CpsFlowDefinition(
+                "stage('unstable') {\n" +
+                "  timeout(1) {\n" +
+                "    timeout(1) {\n" +
+                "      unstable('oops')\n" +
+                "    }\n" +
+                "  }\n" +
+                "}\n", true));
+        WorkflowRun run = j.assertBuildStatus(Result.UNSTABLE, job.scheduleBuild2(0));
+        FlowExecution exec = run.getExecution();
+        /**
+         * Node dump follows, format:
+         * [ID]{parent,ids} flowNodeClassName stepDisplayName [st=startId if a block end node]
+         *
+         * [2]{}FlowStartNode Start of Pipeline
+         * [3]{2}StepStartNode Stage : Start
+         * [4]{3}StepStartNode unstable
+         * [5]{4}StepStartNode Enforce time limit : Start
+         * [6]{5}StepStartNode Enforce time limit : Body : Start
+         * [7]{6}StepStartNode Enforce time limit : Start
+         * [8]{7}StepStartNode Enforce time limit : Body : Start
+         * [9]{8}StepAtomNode UnstableStep
+         * [10]{9}StepEndNode Enforce time limit : Body : End  [st=8]
+         * [11]{10}StepEndNode Enforce time limit : End  [st=7]
+         * [12]{11}StepEndNode Enforce time limit : Body : End  [st=6]
+         * [13]{12}StepEndNode Enforce time limit : End  [st=5]
+         * [14]{13}StepEndNode Stage : Body : End  [st=4]
+         * [15]{14}StepEndNode Stage : End  [st=3]
+         * [16]{15}FlowEndNode End of Pipeline  [st=2]
+         */
+        List<MemoryFlowChunk> stages = getStages(exec);
+        assertEquals(1, stages.size());
+        {
+            MemoryFlowChunk unstable = stages.get(0);
+            assertEquals(exec.getNode("3"), unstable.getNodeBefore());
+            assertEquals(exec.getNode("4"), unstable.getFirstNode());
+            assertEquals(exec.getNode("14"), unstable.getLastNode());
+            assertEquals(exec.getNode("15"), unstable.getNodeAfter());
+            assertEquals(GenericStatus.UNSTABLE, StatusAndTiming.computeChunkStatus2(run, unstable));
         }
     }
 

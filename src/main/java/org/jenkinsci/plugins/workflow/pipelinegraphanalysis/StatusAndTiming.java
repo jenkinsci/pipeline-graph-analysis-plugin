@@ -316,9 +316,7 @@ public class StatusAndTiming {
         FlowNode found = new DepthFirstScanner().findFirstMatch(
                 Collections.singletonList(end),
                 Collections.singletonList(start),
-                tempNode -> {
-                    return start.getId().equals(tempNode.getEnclosingId()) && tempNode.getPersistentAction(WarningAction.class) != null;
-                });
+                tempNode -> tempNode.getPersistentAction(WarningAction.class) != null);
         if (found != null) {
             return found.getPersistentAction(WarningAction.class);
         }
