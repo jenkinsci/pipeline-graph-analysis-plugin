@@ -68,8 +68,10 @@ import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.TimeoutException;
+import java.util.stream.StreamSupport;
 
 /**
  * Provides common, comprehensive set of APIs for doing status and timing computations on pieces of a pipeline execution.
@@ -313,14 +315,15 @@ public class StatusAndTiming {
 
     private static @CheckForNull WarningAction findWarningBetween(@Nonnull FlowNode start, @Nonnull FlowNode end) {
         // TODO: Cache the result?
-        FlowNode found = new DepthFirstScanner().findFirstMatch(
-                Collections.singletonList(end),
-                Collections.singletonList(start),
-                tempNode -> tempNode.getPersistentAction(WarningAction.class) != null);
-        if (found != null) {
-            return found.getPersistentAction(WarningAction.class);
+        DepthFirstScanner scanner = new DepthFirstScanner();
+        if (!scanner.setup(end, Collections.singletonList(start))) {
+            return null;
         }
-        return null;
+        return StreamSupport.stream(scanner.spliterator(), false)
+                .map(node -> node.getPersistentAction(WarningAction.class))
+                .filter(Objects::nonNull)
+                .findFirst()
+                .orElse(null);
     }
 
     /**
