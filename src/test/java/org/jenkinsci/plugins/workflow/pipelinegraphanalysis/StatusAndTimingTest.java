@@ -847,7 +847,7 @@ public class StatusAndTimingTest {
     @Test
     @Issue("JENKINS-39203")
     public void unstableInBlockScopeStep() throws Exception {
-        WorkflowJob job = j.jenkins.createProject(WorkflowJob.class, "unstable");
+        WorkflowJob job = j.jenkins.createProject(WorkflowJob.class, "unstableInBlockScopeStep");
         job.setDefinition(new CpsFlowDefinition(
                 "stage('unstable') {\n" +
                 "  timeout(1) {\n" +
@@ -860,6 +860,27 @@ public class StatusAndTimingTest {
         StagesAndParallelBranchesVisitor visitor = new StagesAndParallelBranchesVisitor(run);
         assertEquals(1, visitor.chunks.size());
         visitor.assertStageOrBranchStatus("unstable", GenericStatus.UNSTABLE);
+    }
+
+    @Test
+    @Issue("JENKINS-45579")
+    public void catchErrorWithStageResult() throws Exception {
+        WorkflowJob job = j.jenkins.createProject(WorkflowJob.class, "catchErrorWithStageResult");
+        job.setDefinition(new CpsFlowDefinition(
+                "stage('failure') {\n" +
+                "  catchError(stageResult: 'FAILURE') {\n" +
+                "    error('oops')\n" +
+                "  }\n" +
+                "  unstable('failure takes priority')\n" +
+                "}\n" +
+                "stage('success') {\n" +
+                "  echo('foo')" +
+                "}\n", true));
+        WorkflowRun run = j.assertBuildStatus(Result.FAILURE, job.scheduleBuild2(0));
+        StagesAndParallelBranchesVisitor visitor = new StagesAndParallelBranchesVisitor(run);
+        assertEquals(2, visitor.chunks.size());
+        visitor.assertStageOrBranchStatus("failure", GenericStatus.FAILURE);
+        visitor.assertStageOrBranchStatus("success", GenericStatus.SUCCESS);
     }
 
     @Test

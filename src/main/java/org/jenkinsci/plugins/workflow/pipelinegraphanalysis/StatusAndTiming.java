@@ -306,7 +306,7 @@ public class StatusAndTiming {
         }
         WarningAction warning = findWarningBetween(firstNode, lastNode);
         if (warning != null) {
-            return GenericStatus.UNSTABLE;
+            return GenericStatus.fromResult(warning.getResult());
         }
 
         // Previous chunk before end. If flow continued beyond this, it didn't fail.
@@ -322,7 +322,7 @@ public class StatusAndTiming {
         return StreamSupport.stream(scanner.spliterator(), false)
                 .map(node -> node.getPersistentAction(WarningAction.class))
                 .filter(Objects::nonNull)
-                .findFirst()
+                .max(Comparator.comparing(warning -> warning.getResult().ordinal))
                 .orElse(null);
     }
 
