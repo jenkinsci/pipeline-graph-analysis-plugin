@@ -29,6 +29,7 @@ import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Sets;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.model.Action;
 import hudson.model.Result;
 import org.apache.commons.lang.StringUtils;
@@ -313,7 +314,13 @@ public class StatusAndTiming {
         return GenericStatus.SUCCESS;
     }
 
+    @SuppressFBWarnings(value = "MS_SHOULD_BE_FINAL", justification = "Non-final for access from the Groovy script console")
+    public static boolean DISABLE_WARNING_ACTION_LOOKUP = Boolean.getBoolean(StatusAndTiming.class.getName() + ".DISABLE_WARNING_ACTION_LOOKUP");
+
     private static @CheckForNull WarningAction findWarningBetween(@Nonnull FlowNode start, @Nonnull FlowNode end) {
+        if (DISABLE_WARNING_ACTION_LOOKUP) {
+            return null;
+        }
         // TODO: Cache the result?
         DepthFirstScanner scanner = new DepthFirstScanner();
         if (!scanner.setup(end, Collections.singletonList(start))) {
