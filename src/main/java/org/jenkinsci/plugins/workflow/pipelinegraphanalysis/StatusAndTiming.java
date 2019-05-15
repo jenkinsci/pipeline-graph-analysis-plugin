@@ -29,6 +29,7 @@ import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Sets;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.model.Action;
 import hudson.model.Result;
 import org.apache.commons.lang.StringUtils;
@@ -38,6 +39,7 @@ import org.jenkinsci.plugins.workflow.actions.QueueItemAction;
 import org.jenkinsci.plugins.workflow.actions.TagsAction;
 import org.jenkinsci.plugins.workflow.actions.ThreadNameAction;
 import org.jenkinsci.plugins.workflow.actions.TimingAction;
+import org.jenkinsci.plugins.workflow.actions.WarningAction;
 import org.jenkinsci.plugins.workflow.cps.nodes.StepStartNode;
 import org.jenkinsci.plugins.workflow.flow.FlowExecution;
 import org.jenkinsci.plugins.workflow.graph.BlockEndNode;
@@ -67,8 +69,10 @@ import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.TimeoutException;
+import java.util.stream.StreamSupport;
 
 /**
  * Provides common, comprehensive set of APIs for doing status and timing computations on pieces of a pipeline execution.
@@ -301,9 +305,32 @@ public class StatusAndTiming {
                 return GenericStatus.FAILURE;
             }
         }
+        WarningAction warning = findWarningBetween(firstNode, lastNode);
+        if (warning != null) {
+            return GenericStatus.fromResult(warning.getResult());
+        }
 
         // Previous chunk before end. If flow continued beyond this, it didn't fail.
-        return (run.getResult() == Result.UNSTABLE) ? GenericStatus.UNSTABLE : GenericStatus.SUCCESS;
+        return GenericStatus.SUCCESS;
+    }
+
+    @SuppressFBWarnings(value = "MS_SHOULD_BE_FINAL", justification = "Non-final for access from the Groovy script console")
+    public static boolean DISABLE_WARNING_ACTION_LOOKUP = Boolean.getBoolean(StatusAndTiming.class.getName() + ".DISABLE_WARNING_ACTION_LOOKUP");
+
+    private static @CheckForNull WarningAction findWarningBetween(@Nonnull FlowNode start, @Nonnull FlowNode end) {
+        if (DISABLE_WARNING_ACTION_LOOKUP) {
+            return null;
+        }
+        // TODO: Cache the result?
+        DepthFirstScanner scanner = new DepthFirstScanner();
+        if (!scanner.setup(end, Collections.singletonList(start))) {
+            return null;
+        }
+        return StreamSupport.stream(scanner.spliterator(), false)
+                .map(node -> node.getPersistentAction(WarningAction.class))
+                .filter(Objects::nonNull)
+                .max(Comparator.comparing(warning -> warning.getResult().ordinal))
+                .orElse(null);
     }
 
     /**

@@ -37,7 +37,7 @@
         <changelist>-SNAPSHOT</changelist>
         <jenkins.version>2.138.4</jenkins.version>
         <java.level>8</java.level>
-        <workflow-api.version>2.34-rc889.401891b554d9</workflow-api.version> <!-- TODO https://github.com/jenkinsci/workflow-api-plugin/pull/89 -->
+        <workflow-api.version>2.34</workflow-api.version>
         <workflow-support.version>3.2</workflow-support.version>
     </properties>
 
@@ -88,9 +88,9 @@
             <version>2.19</version>
         </dependency>
         <dependency>
-            <groupId>org.jenkins-ci.plugins.workflow</groupId>
+           <groupId>org.jenkins-ci.plugins.workflow</groupId>
             <artifactId>workflow-basic-steps</artifactId>
-            <version>2.15</version>
+            <version>2.16</version>
             <scope>test</scope>
         </dependency>
         <dependency>
