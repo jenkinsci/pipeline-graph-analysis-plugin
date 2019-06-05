@@ -305,7 +305,7 @@ public class StatusAndTiming {
                 return GenericStatus.FAILURE;
             }
         }
-        WarningAction warning = findWarningBetween(firstNode, lastNode);
+        WarningAction warning = findWorstWarningBetween(firstNode, lastNode);
         if (warning != null) {
             return GenericStatus.fromResult(warning.getResult());
         }
@@ -317,7 +317,13 @@ public class StatusAndTiming {
     @SuppressFBWarnings(value = "MS_SHOULD_BE_FINAL", justification = "Non-final for access from the Groovy script console")
     public static boolean DISABLE_WARNING_ACTION_LOOKUP = Boolean.getBoolean(StatusAndTiming.class.getName() + ".DISABLE_WARNING_ACTION_LOOKUP");
 
-    private static @CheckForNull WarningAction findWarningBetween(@Nonnull FlowNode start, @Nonnull FlowNode end) {
+    /**
+     * Find the worst result {@link WarningAction} on {@link FlowNode}s between the given start and end nodes
+     * @param start The flow node to start from
+     * @param end The flow node to end on
+     * @return a possibly null {@link WarningAction} with the worst result
+     */
+    public static @CheckForNull WarningAction findWorstWarningBetween(@Nonnull FlowNode start, @Nonnull FlowNode end) {
         if (DISABLE_WARNING_ACTION_LOOKUP) {
             return null;
         }
