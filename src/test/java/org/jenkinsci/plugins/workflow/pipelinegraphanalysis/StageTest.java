@@ -79,7 +79,7 @@ public class StageTest {
                 "     archive(includes: 'file.txt'); " +
                 "     echo ('Deploying'); " +
                 "   } \n" +
-                "}"));
+                "}", true));
         /**
          * Node dump follows, format:
          [ID]{parent,ids} flowNodeClassName stepDisplayName [st=startId if a block node]
@@ -159,8 +159,8 @@ public class StageTest {
                 "stage ('fourth') {\n" +
                 "    echo 'ran fourth'\n" +
                 "}\n" +
-                "echo 'another orphan step'"
-        ));
+                "echo 'another orphan step'",
+                true));
         WorkflowRun build = jenkinsRule.assertBuildStatusSuccess(job.scheduleBuild2(0));
 
         /**
@@ -237,7 +237,7 @@ public class StageTest {
                 "     writeFile file: 'file.txt', text:'content'; " +
                 "     archive(includes: 'file.txt'); " +
                 "   echo ('Deploying'); " +
-                "}"));
+                "}", true));
         /**
          * Node dump follows, format:
          [ID]{parent,ids} flowNodeClassName stepDisplayName [st=startId if a block node]

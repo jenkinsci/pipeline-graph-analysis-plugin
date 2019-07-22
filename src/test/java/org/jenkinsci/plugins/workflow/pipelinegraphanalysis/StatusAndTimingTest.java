@@ -118,7 +118,7 @@ public class StatusAndTimingTest {
                 "sleep 1 \n" +
                 "stage 'first' \n" +
                 "sleep 1 \n" +
-                "echo 'done' \n"));
+                "echo 'done' \n", true));
 
         /** Node dump follows, format:
          [ID]{parent,ids}(millisSinceStartOfRun) flowClassName displayName [st=startId if a block node]
@@ -190,7 +190,7 @@ public class StatusAndTimingTest {
                 "sleep 1 \n" +
                 "stage 'first' \n" +
                 "sleep 1 \n" +
-                "error('fails') \n"));
+                "error('fails') \n", true));
         /**  Node dump follows, format:
         [ID]{parent,ids} flowClassName displayName [st=startId if a block node]
         Action format:
@@ -239,7 +239,7 @@ public class StatusAndTimingTest {
                 "def branches = ['failFast': false]\n" +
                 "branches['success'] = {sleep 1; echo 'succeed'}\n" +
                 "branches['fail'] = {error('autofail');}\n" +
-                "parallel branches"));
+                "parallel branches", true));
 
         /**
          * Node dump from a run follows, format:
@@ -344,7 +344,7 @@ public class StatusAndTimingTest {
                 "sleep 1 \n" +
                 "stage 'first' \n" +
                 "sleep 1 \n" +
-                "semaphore('wait') \n"));
+                "semaphore('wait') \n", true));
         WorkflowRun run = job.scheduleBuild2(0).getStartCondition().get();
         SemaphoreStep.waitForStart("wait/1", run);
         FlowExecution exec = run.getExecution();
@@ -369,7 +369,7 @@ public class StatusAndTimingTest {
         // This must be amateur science fiction because the exposition for the setting goes on FOREVER
         ForkScanner scan = new ForkScanner();
         WorkflowJob job = j.jenkins.createProject(WorkflowJob.class, "parallelTimes");
-        job.setDefinition(new CpsFlowDefinition(jobScript));
+        job.setDefinition(new CpsFlowDefinition(jobScript, true));
         WorkflowRun run = job.scheduleBuild2(0).getStartCondition().get();
         Thread.sleep(4000);  // We need the short branch to be complete so we know timing should exceed its duration
         FlowExecution exec = run.getExecution();
@@ -401,7 +401,7 @@ public class StatusAndTimingTest {
                 "def branches = ['failFast': false]\n" +
                 "branches['success'] = {echo 'succeed'}\n" +
                 "branches['pause'] = { sleep 1; semaphore 'wait'; }\n" +
-                "parallel branches"));
+                "parallel branches", true));
         /**
          * Node dump follows, format:
          [ID]{parentIds,...} flowNodeClassName displayName [st=startId if a block node]
@@ -480,7 +480,7 @@ public class StatusAndTimingTest {
         job.setDefinition(new CpsFlowDefinition("" + // FlowStartNode: ID 2
                 "stage 'first' \n" + // FlowNode 3
                 "echo 'print something' \n" + // FlowNode 4
-                "input 'prompt' \n"));  // FlowNode 5, end node will be #6
+                "input 'prompt' \n", true));  // FlowNode 5, end node will be #6
         QueueTaskFuture<WorkflowRun> buildTask = job.scheduleBuild2(0);
         WorkflowRun run = buildTask.getStartCondition().get();
         CpsFlowExecution e = (CpsFlowExecution) run.getExecutionPromise().get();
@@ -522,7 +522,7 @@ public class StatusAndTimingTest {
                 sleep + //13
                 "        }\n" +
                 "    }\n" +
-                "}"));
+                "}", true));
         QueueTaskFuture<WorkflowRun> buildTask = job.scheduleBuild2(0);
         WorkflowRun run = buildTask.getStartCondition().get();
         CpsFlowExecution e = (CpsFlowExecution) run.getExecutionPromise().get();
@@ -750,7 +750,7 @@ public class StatusAndTimingTest {
                 "       } \n"+
                 "   } \n"+
                 "} \n",
-                false));
+                true));
 
         WorkflowRun build = j.assertBuildStatusSuccess(job.scheduleBuild2(0));
         StagesAndParallelBranchesVisitor visitor = new StagesAndParallelBranchesVisitor(build);
