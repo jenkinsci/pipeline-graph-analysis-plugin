@@ -579,7 +579,7 @@ public class StatusAndTiming {
         }
         DepthFirstScanner scanner = new DepthFirstScanner();
         List<FlowNode> sorted = scanner.filteredNodes(exec.getCurrentHeads(), Predicates.alwaysTrue());
-        Collections.sort(sorted, new Comparator<FlowNode>() {
+        sorted.sort(new Comparator<FlowNode>() {
             @Override
             public int compare(FlowNode node1, FlowNode node2) {
                 int node1Iota = parseIota(node1);
