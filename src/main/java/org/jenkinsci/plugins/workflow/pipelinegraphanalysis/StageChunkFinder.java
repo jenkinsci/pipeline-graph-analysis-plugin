@@ -27,7 +27,7 @@ public class StageChunkFinder implements ChunkFinder {
 
     @Override
     public boolean isChunkStart(@Nonnull FlowNode current, @CheckForNull FlowNode previous) {
-        if ((current instanceof StepAtomNode || current instanceof StepStartNode) && !((((StepNode) current).getDescriptor()) instanceof StageStep.DescriptorImpl)) {
+        if ((current instanceof StepAtomNode || current instanceof StepStartNode) && !(((StepNode) current).getDescriptor() instanceof StageStep.DescriptorImpl)) {
             // Faster than looking at actions
             return false;
         } else if (current instanceof BlockEndNode) {
