@@ -15,6 +15,8 @@ import org.jvnet.hudson.test.JenkinsRule;
 import javax.annotation.Nonnull;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
+import java.util.List;
 
 /**
  * Tests the stage collection
@@ -26,10 +28,10 @@ public class StageTest {
     public JenkinsRule jenkinsRule = new JenkinsRule();
 
     public static class CollectingChunkVisitor extends StandardChunkVisitor {
-        ArrayDeque<MemoryFlowChunk> allChunks = new ArrayDeque<MemoryFlowChunk>();
+        Deque<MemoryFlowChunk> allChunks = new ArrayDeque<>();
 
-        public ArrayList<MemoryFlowChunk> getChunks() {
-            return new ArrayList<MemoryFlowChunk>(allChunks);
+        public List<MemoryFlowChunk> getChunks() {
+            return new ArrayList<>(allChunks);
         }
 
         protected void handleChunkDone(@Nonnull MemoryFlowChunk chunk) {
@@ -135,7 +137,7 @@ public class StageTest {
         CollectingChunkVisitor visitor = new CollectingChunkVisitor();
         scan.visitSimpleChunks(visitor, new StageChunkFinder());
 
-        ArrayList<MemoryFlowChunk> stages = visitor.getChunks();
+        List<MemoryFlowChunk> stages = visitor.getChunks();
         Assert.assertEquals(3, stages.size());
         assertChunkBoundary(stages.get(0), 5, 6, 8, 9);
         assertChunkBoundary(stages.get(1), 10, 11, 13, 14);
@@ -213,7 +215,7 @@ public class StageTest {
         scan.setup(build.getExecution().getCurrentHeads());
         CollectingChunkVisitor visitor = new CollectingChunkVisitor();
         scan.visitSimpleChunks(visitor, new StageChunkFinder());
-        ArrayList<MemoryFlowChunk> stages = visitor.getChunks();
+        List<MemoryFlowChunk> stages = visitor.getChunks();
 
         Assert.assertEquals(4, stages.size());
         assertChunkBoundary(stages.get(0), 3, 4, 6, 7);
@@ -283,7 +285,7 @@ public class StageTest {
         scan.setup(build.getExecution().getCurrentHeads());
         CollectingChunkVisitor visitor = new CollectingChunkVisitor();
         scan.visitSimpleChunks(visitor, new StageChunkFinder());
-        ArrayList<MemoryFlowChunk> stages = visitor.getChunks();
+        List<MemoryFlowChunk> stages = visitor.getChunks();
 
         Assert.assertEquals(3, stages.size());
         assertChunkBoundary(stages.get(0), 4, 5, 6, 7);

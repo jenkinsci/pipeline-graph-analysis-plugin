@@ -296,7 +296,7 @@ public class StatusAndTimingTest {
 
         assertEquals(2, branchStatuses.size());
         String[] branches = {"fail", "success"};
-        List<String> outputBranchList = new ArrayList<String>(branchStatuses.keySet());
+        List<String> outputBranchList = new ArrayList<>(branchStatuses.keySet());
         Collections.sort(outputBranchList);
         Assert.assertArrayEquals(branches, outputBranchList.toArray());
         assertEquals(GenericStatus.FAILURE, branchStatuses.get("fail"));
@@ -310,7 +310,7 @@ public class StatusAndTimingTest {
         Map<String, TimingInfo> branchTimings = StatusAndTiming.computeParallelBranchTimings(
             run, exec.getNode("4"), parallelStarts, parallelEnds, exec.getNode("13"), simulatedPauses
         );
-        outputBranchList = new ArrayList<String>(branchTimings.keySet());
+        outputBranchList = new ArrayList<>(branchTimings.keySet());
         Collections.sort(outputBranchList);
         Assert.assertArrayEquals(branches, outputBranchList.toArray());
 
@@ -444,14 +444,14 @@ public class StatusAndTimingTest {
         assertEquals(GenericStatus.SUCCESS, // All but the in-progress node in the in-progress branch
                 StatusAndTiming.computeChunkStatus2(run, exec.getNode("4"), exec.getNode("7"), exec.getNode("10"), exec.getNode("11")));
 
-        List<BlockStartNode> branchStartNodes = new ArrayList<BlockStartNode>();
+        List<BlockStartNode> branchStartNodes = new ArrayList<>();
         branchStartNodes.add((BlockStartNode) (exec.getNode("6")));
         branchStartNodes.add((BlockStartNode) (exec.getNode("7")));
         List<FlowNode> branchEndNodes = Arrays.asList(getNodes(exec, new int[]{9, 11}));
 
         // All branch statuses
         Map<String, GenericStatus> statuses = StatusAndTiming.computeBranchStatuses2(run, exec.getNode("4"), branchStartNodes, branchEndNodes, null);
-        Assert.assertArrayEquals(new String[]{"pause", "success"}, new TreeSet<String>(statuses.keySet()).toArray());
+        Assert.assertArrayEquals(new String[]{"pause", "success"}, new TreeSet<>(statuses.keySet()).toArray());
         assertEquals(GenericStatus.SUCCESS, statuses.get("success"));
         assertEquals(GenericStatus.IN_PROGRESS, statuses.get("pause"));
 
@@ -673,7 +673,7 @@ public class StatusAndTimingTest {
         CpsFlowExecution execution = (CpsFlowExecution) b1.getExecutionPromise().get();
 
         // Branch start nodes will be consistent across the whole run.
-        List<BlockStartNode> branchStartNodes = new ArrayList<BlockStartNode>();
+        List<BlockStartNode> branchStartNodes = new ArrayList<>();
         branchStartNodes.add((BlockStartNode) (execution.getNode("7")));
         branchStartNodes.add((BlockStartNode) (execution.getNode("8")));
 

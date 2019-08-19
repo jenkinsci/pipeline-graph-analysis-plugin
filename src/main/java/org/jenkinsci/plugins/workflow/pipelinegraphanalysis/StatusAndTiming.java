@@ -447,7 +447,7 @@ public class StatusAndTiming {
         if (branchStarts.size() != pauseDurations.length) {
             throw new IllegalArgumentException("Mismatched node count and pause duration array: "+branchStarts.size()+","+pauseDurations.length);
         }
-        HashMap<String, TimingInfo> timings = new HashMap<String,TimingInfo>();
+        Map<String, TimingInfo> timings = new HashMap<>();
         for (int i=0; i<branchEnds.size(); i++) {
             BlockStartNode start = branchStarts.get(i);
             FlowNode end = branchEnds.get(i);
@@ -464,7 +464,7 @@ public class StatusAndTiming {
     }
 
     private static Map<String, GenericStatus> coerceStatusMap(Map<String, GenericStatus> newStatusMap) {
-        HashMap<String, GenericStatus> coercedVals = new HashMap<String, GenericStatus>(newStatusMap.size());
+        Map<String, GenericStatus> coercedVals = new HashMap<>(newStatusMap.size());
         for (Map.Entry<String, GenericStatus> oldEntry : newStatusMap.entrySet()) {
             coercedVals.put(oldEntry.getKey(), coerceStatusApi(oldEntry.getValue(), API_V1));
         }
@@ -487,8 +487,8 @@ public class StatusAndTiming {
      *  to safely handle addition of new statuses. */
     public static Map<String, GenericStatus> computeBranchStatuses2(@Nonnull WorkflowRun run, @Nonnull ParallelMemoryFlowChunk parallel) {
         Map<String,MemoryFlowChunk> branches = parallel.getBranches();
-        List<BlockStartNode> starts = new ArrayList<BlockStartNode>(branches.size());
-        List<FlowNode> ends = new ArrayList<FlowNode>(branches.size());
+        List<BlockStartNode> starts = new ArrayList<>(branches.size());
+        List<FlowNode> ends = new ArrayList<>(branches.size());
         // We can optimize this if needed by not fetching the LabelAction below
         for (MemoryFlowChunk chunk : branches.values()) {
             starts.add((BlockStartNode)chunk.getFirstNode());
@@ -536,7 +536,7 @@ public class StatusAndTiming {
         if (branchStarts.size() != branchEnds.size()) {
             throw new IllegalArgumentException("Mismatched start and stop node counts: "+branchStarts.size()+","+branchEnds.size());
         }
-        HashMap<String, GenericStatus> statusMappings = new HashMap<String, GenericStatus>();
+        Map<String, GenericStatus> statusMappings = new HashMap<>();
         for (int i=0; i<branchEnds.size(); i++) {
             BlockStartNode start = branchStarts.get(i);
             FlowNode end = branchEnds.get(i);
