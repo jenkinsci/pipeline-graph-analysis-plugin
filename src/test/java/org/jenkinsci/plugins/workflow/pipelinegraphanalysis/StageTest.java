@@ -82,7 +82,7 @@ public class StageTest {
                 "     echo ('Deploying'); " +
                 "   } \n" +
                 "}", true));
-        /**
+        /*
          * Node dump follows, format:
          [ID]{parent,ids} flowNodeClassName stepDisplayName [st=startId if a block node]
          Action format:
@@ -165,7 +165,7 @@ public class StageTest {
                 true));
         WorkflowRun build = jenkinsRule.assertBuildStatusSuccess(job.scheduleBuild2(0));
 
-        /**
+        /*
          * Node dump follows, format:
          [ID]{parent,ids}(millisSinceStartOfRun) flowNodeClassName stepDisplayName [st=startId if a block node]
          Action format:
@@ -240,7 +240,7 @@ public class StageTest {
                 "     archive(includes: 'file.txt'); " +
                 "   echo ('Deploying'); " +
                 "}", true));
-        /**
+        /*
          * Node dump follows, format:
          [ID]{parent,ids} flowNodeClassName stepDisplayName [st=startId if a block node]
          Action format:

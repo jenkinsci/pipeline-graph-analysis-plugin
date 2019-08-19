@@ -120,7 +120,7 @@ public class StatusAndTimingTest {
                 "sleep 1 \n" +
                 "echo 'done' \n", true));
 
-        /** Node dump follows, format:
+        /* Node dump follows, format:
          [ID]{parent,ids}(millisSinceStartOfRun) flowClassName displayName [st=startId if a block node]
          Action format:
          - actionClassName actionDisplayName
@@ -191,7 +191,7 @@ public class StatusAndTimingTest {
                 "stage 'first' \n" +
                 "sleep 1 \n" +
                 "error('fails') \n", true));
-        /**  Node dump follows, format:
+        /*  Node dump follows, format:
         [ID]{parent,ids} flowClassName displayName [st=startId if a block node]
         Action format:
         - actionClassName actionDisplayName
@@ -241,7 +241,7 @@ public class StatusAndTimingTest {
                 "branches['fail'] = {error('autofail');}\n" +
                 "parallel branches", true));
 
-        /**
+        /*
          * Node dump from a run follows, format:
          [ID]{parent,ids}(millisSinceStartOfRun) flowClassName displayName [st=startId if a block node]
          Action format: (key actions only)
@@ -402,7 +402,7 @@ public class StatusAndTimingTest {
                 "branches['success'] = {echo 'succeed'}\n" +
                 "branches['pause'] = { sleep 1; semaphore 'wait'; }\n" +
                 "parallel branches", true));
-        /**
+        /*
          * Node dump follows, format:
          [ID]{parentIds,...} flowNodeClassName displayName [st=startId if a block node]
          Action format:
@@ -620,7 +620,7 @@ public class StatusAndTimingTest {
         WorkflowJob job = j.jenkins.createProject(WorkflowJob.class, "queuedAndParallel");
         j.createSlave("first-agent", "first", null);
 
-        /**
+        /*
             Node dump follows, format:
             [ID]{parent,ids}flowNodeClassName stepDisplayName [st=startId if a block end node]
             ------------------------------------------------------------------------------------------

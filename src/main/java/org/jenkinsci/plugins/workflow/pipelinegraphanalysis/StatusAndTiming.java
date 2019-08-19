@@ -469,20 +469,20 @@ public class StatusAndTiming {
         return coercedVals;
     }
 
-    @Nonnull
-    @Deprecated
     /** Get statuses for each branch - note: some statuses may be null. Retains compatibility with the original GenericStatus values.
      *  Use {@link #computeBranchStatuses2(WorkflowRun, ParallelMemoryFlowChunk)} once you have a solid way to support new status codings.
      */
+    @Nonnull
+    @Deprecated
     public static Map<String, GenericStatus> computeBranchStatuses(@Nonnull WorkflowRun run, @Nonnull ParallelMemoryFlowChunk parallel) {
         return coerceStatusMap(computeBranchStatuses2(run, parallel));
     }
 
 
 
-    @Nonnull
     /** Get statuses for each branch - note: some statuses may be null, API consumers MUST use {@link #coerceStatusApi(GenericStatus, StatusApiVersion)} on outputs
      *  to safely handle addition of new statuses. */
+    @Nonnull
     public static Map<String, GenericStatus> computeBranchStatuses2(@Nonnull WorkflowRun run, @Nonnull ParallelMemoryFlowChunk parallel) {
         Map<String,MemoryFlowChunk> branches = parallel.getBranches();
         List<BlockStartNode> starts = new ArrayList<>(branches.size());
