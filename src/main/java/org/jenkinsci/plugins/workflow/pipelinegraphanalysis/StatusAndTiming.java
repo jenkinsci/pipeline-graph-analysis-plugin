@@ -608,12 +608,7 @@ public class StatusAndTiming {
         System.out.println("Action format: ");
         System.out.println("\t- actionClassName actionDisplayName");
         System.out.println("------------------------------------------------------------------------------------------");
-        Function<FlowNode, String> flowNodeToId = new Function<FlowNode, String>(){
-            @Override
-            public String apply(@Nullable FlowNode input) {
-                return (input != null) ? input.getId() : null;
-            }
-        };
+        Function<FlowNode, String> flowNodeToId = input -> input != null ? input.getId() : null;
         for (FlowNode node : sorted) {
             StringBuilder formatted = new StringBuilder();
             formatted.append('[').append(node.getId()).append(']');
