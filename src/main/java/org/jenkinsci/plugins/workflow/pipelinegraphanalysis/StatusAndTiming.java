@@ -24,10 +24,7 @@
 
 package org.jenkinsci.plugins.workflow.pipelinegraphanalysis;
 
-import com.google.common.base.Function;
-import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
-import com.google.common.collect.Collections2;
 import com.google.common.collect.Sets;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.model.Action;
@@ -72,6 +69,9 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.TimeoutException;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 /**
@@ -612,7 +612,7 @@ public class StatusAndTiming {
         for (FlowNode node : sorted) {
             StringBuilder formatted = new StringBuilder();
             formatted.append('[').append(node.getId()).append(']');
-            formatted.append('{').append(StringUtils.join(Collections2.transform(node.getParents(), flowNodeToId), ',')).append('}');
+            formatted.append('{').append(StringUtils.join(node.getParents().stream().map(flowNodeToId).collect(Collectors.toList()), ',')).append('}');
             if (showTiming) {
                 formatted.append('(');
                 if (node.getAction(TimingAction.class) != null) {
