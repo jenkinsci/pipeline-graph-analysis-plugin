@@ -20,6 +20,7 @@ import javax.annotation.Nonnull;
  */
 public class StageChunkFinder implements ChunkFinder {
 
+    @Override
     public boolean isStartInsideChunk() {
         return true;
     }

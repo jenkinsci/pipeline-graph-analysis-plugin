@@ -34,6 +34,7 @@ public class StageTest {
             return new ArrayList<>(allChunks);
         }
 
+        @Override
         protected void handleChunkDone(@Nonnull MemoryFlowChunk chunk) {
             allChunks.push(chunk);
             this.chunk = new MemoryFlowChunk();
