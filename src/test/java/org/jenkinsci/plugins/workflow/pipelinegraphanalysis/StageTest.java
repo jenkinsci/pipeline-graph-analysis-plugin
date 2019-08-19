@@ -41,7 +41,7 @@ public class StageTest {
     }
 
     /** Assert that chunk flownode IDs match expected, use 0 or -1 ID for null flownode */
-    public static void assertChunkBoundary(FlowChunkWithContext chunk, int beforeId, int firstId, int lastId, int afterId) {
+    private static void assertChunkBoundary(FlowChunkWithContext chunk, int beforeId, int firstId, int lastId, int afterId) {
         // First check the chunk boundaries, then the before/after
         Assert.assertNotNull(chunk.getFirstNode());
         Assert.assertEquals(firstId, Integer.parseInt(chunk.getFirstNode().getId()));

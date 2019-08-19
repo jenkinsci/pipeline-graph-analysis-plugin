@@ -82,7 +82,7 @@ public class StatusAndTimingTest {
     public static BuildWatcher buildWatcher = new BuildWatcher();
 
     // Helper
-    static FlowNode[] getNodes(FlowExecution exec, int[] ids) throws IOException {
+    private static FlowNode[] getNodes(FlowExecution exec, int[] ids) throws IOException {
         FlowNode[] output = new FlowNode[ids.length];
         for (int i=0; i < ids.length; i++) {
             output[i] = exec.getNode(Integer.toString(ids[i]));
@@ -105,7 +105,7 @@ public class StatusAndTimingTest {
     }
 
     // Helper
-    static public long doTiming(FlowExecution exec, int firstNodeId, int nodeAfterEndId) throws  IOException {
+    private static long doTiming(FlowExecution exec, int firstNodeId, int nodeAfterEndId) throws  IOException {
         long startTime = TimingAction.getStartTime(exec.getNode(Integer.toString(firstNodeId)));
         long endTime = TimingAction.getStartTime(exec.getNode(Integer.toString(nodeAfterEndId)));
         return endTime-startTime;
