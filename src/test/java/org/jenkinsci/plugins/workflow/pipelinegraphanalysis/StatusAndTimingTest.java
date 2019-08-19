@@ -451,7 +451,7 @@ public class StatusAndTimingTest {
 
         // All branch statuses
         Map<String, GenericStatus> statuses = StatusAndTiming.computeBranchStatuses2(run, exec.getNode("4"), branchStartNodes, branchEndNodes, null);
-        assertEquals(new String[]{"pause", "success"}, new TreeSet<String>(statuses.keySet()).toArray());
+        Assert.assertArrayEquals(new String[]{"pause", "success"}, new TreeSet<String>(statuses.keySet()).toArray());
         assertEquals(GenericStatus.SUCCESS, statuses.get("success"));
         assertEquals(GenericStatus.IN_PROGRESS, statuses.get("pause"));
 
