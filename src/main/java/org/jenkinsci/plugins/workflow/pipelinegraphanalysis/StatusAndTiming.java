@@ -181,9 +181,7 @@ public class StatusAndTiming {
                     executions = null;
                 }
             }
-            if (executions != null && !executions.isEmpty()) {
-                return true;
-            }
+            return executions != null && !executions.isEmpty();
         }
         return false;
     }
