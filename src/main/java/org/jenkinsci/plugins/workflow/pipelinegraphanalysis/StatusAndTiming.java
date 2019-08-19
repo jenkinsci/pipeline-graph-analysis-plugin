@@ -580,7 +580,7 @@ public class StatusAndTiming {
             return;
         }
         DepthFirstScanner scanner = new DepthFirstScanner();
-        List<FlowNode> sorted = scanner.filteredNodes(exec.getCurrentHeads(), (Predicate) Predicates.alwaysTrue());
+        List<FlowNode> sorted = scanner.filteredNodes(exec.getCurrentHeads(), Predicates.alwaysTrue());
         Collections.sort(sorted, new Comparator<FlowNode>() {
             @Override
             public int compare(FlowNode node1, FlowNode node2) {
