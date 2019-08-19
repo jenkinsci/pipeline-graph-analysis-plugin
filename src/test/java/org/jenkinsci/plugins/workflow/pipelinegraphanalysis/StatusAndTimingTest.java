@@ -380,7 +380,7 @@ public class StatusAndTimingTest {
                 run, null, exec.getNode("2"), heads.get(1), null));
         TestVisitor visitor = new TestVisitor();
         scan.setup(heads);
-        scan.visitSimpleChunks(heads, visitor, new NoOpChunkFinder());
+        ForkScanner.visitSimpleChunks(heads, visitor, new NoOpChunkFinder());
         TestVisitor.CallEntry entry = visitor.filteredCallsByType(TestVisitor.CallType.PARALLEL_END).get(0);
         FlowNode endNode = exec.getNode(entry.getNodeId().toString());
         assertEquals("sleep", endNode.getDisplayFunctionName());
