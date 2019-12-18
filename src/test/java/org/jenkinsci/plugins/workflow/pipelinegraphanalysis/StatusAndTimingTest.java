@@ -535,6 +535,11 @@ public class StatusAndTimingTest {
 
         status = StatusAndTiming.computeChunkStatus2(run, null, e.getNode("12"), e.getNode("12"), null);
         assertEquals(GenericStatus.PAUSED_PENDING_INPUT, status);
+
+        run.doStop();
+        j.waitForMessage("Sending interrupt signal to process", run);
+        j.waitForCompletion(run);
+        j.assertBuildStatus(Result.ABORTED, run);
     }
 
     @Issue("JENKINS-44981")
