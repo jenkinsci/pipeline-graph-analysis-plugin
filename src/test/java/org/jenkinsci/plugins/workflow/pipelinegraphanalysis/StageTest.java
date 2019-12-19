@@ -15,6 +15,8 @@ import org.jvnet.hudson.test.JenkinsRule;
 import javax.annotation.Nonnull;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
+import java.util.List;
 
 /**
  * Tests the stage collection
@@ -26,12 +28,13 @@ public class StageTest {
     public JenkinsRule jenkinsRule = new JenkinsRule();
 
     public static class CollectingChunkVisitor extends StandardChunkVisitor {
-        ArrayDeque<MemoryFlowChunk> allChunks = new ArrayDeque<MemoryFlowChunk>();
+        Deque<MemoryFlowChunk> allChunks = new ArrayDeque<>();
 
-        public ArrayList<MemoryFlowChunk> getChunks() {
-            return new ArrayList<MemoryFlowChunk>(allChunks);
+        public List<MemoryFlowChunk> getChunks() {
+            return new ArrayList<>(allChunks);
         }
 
+        @Override
         protected void handleChunkDone(@Nonnull MemoryFlowChunk chunk) {
             allChunks.push(chunk);
             this.chunk = new MemoryFlowChunk();
@@ -39,7 +42,7 @@ public class StageTest {
     }
 
     /** Assert that chunk flownode IDs match expected, use 0 or -1 ID for null flownode */
-    public static void assertChunkBoundary(FlowChunkWithContext chunk, int beforeId, int firstId, int lastId, int afterId) {
+    private static void assertChunkBoundary(FlowChunkWithContext chunk, int beforeId, int firstId, int lastId, int afterId) {
         // First check the chunk boundaries, then the before/after
         Assert.assertNotNull(chunk.getFirstNode());
         Assert.assertEquals(firstId, Integer.parseInt(chunk.getFirstNode().getId()));
@@ -80,7 +83,7 @@ public class StageTest {
                 "     echo ('Deploying'); " +
                 "   } \n" +
                 "}", true));
-        /**
+        /*
          * Node dump follows, format:
          [ID]{parent,ids} flowNodeClassName stepDisplayName [st=startId if a block node]
          Action format:
@@ -135,7 +138,7 @@ public class StageTest {
         CollectingChunkVisitor visitor = new CollectingChunkVisitor();
         scan.visitSimpleChunks(visitor, new StageChunkFinder());
 
-        ArrayList<MemoryFlowChunk> stages = visitor.getChunks();
+        List<MemoryFlowChunk> stages = visitor.getChunks();
         Assert.assertEquals(3, stages.size());
         assertChunkBoundary(stages.get(0), 5, 6, 8, 9);
         assertChunkBoundary(stages.get(1), 10, 11, 13, 14);
@@ -163,7 +166,7 @@ public class StageTest {
                 true));
         WorkflowRun build = jenkinsRule.assertBuildStatusSuccess(job.scheduleBuild2(0));
 
-        /**
+        /*
          * Node dump follows, format:
          [ID]{parent,ids}(millisSinceStartOfRun) flowNodeClassName stepDisplayName [st=startId if a block node]
          Action format:
@@ -213,7 +216,7 @@ public class StageTest {
         scan.setup(build.getExecution().getCurrentHeads());
         CollectingChunkVisitor visitor = new CollectingChunkVisitor();
         scan.visitSimpleChunks(visitor, new StageChunkFinder());
-        ArrayList<MemoryFlowChunk> stages = visitor.getChunks();
+        List<MemoryFlowChunk> stages = visitor.getChunks();
 
         Assert.assertEquals(4, stages.size());
         assertChunkBoundary(stages.get(0), 3, 4, 6, 7);
@@ -238,7 +241,7 @@ public class StageTest {
                 "     archive(includes: 'file.txt'); " +
                 "   echo ('Deploying'); " +
                 "}", true));
-        /**
+        /*
          * Node dump follows, format:
          [ID]{parent,ids} flowNodeClassName stepDisplayName [st=startId if a block node]
          Action format:
@@ -283,7 +286,7 @@ public class StageTest {
         scan.setup(build.getExecution().getCurrentHeads());
         CollectingChunkVisitor visitor = new CollectingChunkVisitor();
         scan.visitSimpleChunks(visitor, new StageChunkFinder());
-        ArrayList<MemoryFlowChunk> stages = visitor.getChunks();
+        List<MemoryFlowChunk> stages = visitor.getChunks();
 
         Assert.assertEquals(3, stages.size());
         assertChunkBoundary(stages.get(0), 4, 5, 6, 7);

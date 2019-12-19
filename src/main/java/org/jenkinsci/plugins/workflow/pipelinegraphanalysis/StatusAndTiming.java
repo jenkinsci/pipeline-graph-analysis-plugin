@@ -24,10 +24,7 @@
 
 package org.jenkinsci.plugins.workflow.pipelinegraphanalysis;
 
-import com.google.common.base.Function;
-import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
-import com.google.common.collect.Collections2;
 import com.google.common.collect.Sets;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.model.Action;
@@ -60,7 +57,6 @@ import org.kohsuke.accmod.restrictions.DoNotUse;
 
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -72,6 +68,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.TimeoutException;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
 /**
@@ -181,9 +179,7 @@ public class StatusAndTiming {
                     executions = null;
                 }
             }
-            if (executions != null && !executions.isEmpty()) {
-                return true;
-            }
+            return executions != null && !executions.isEmpty();
         }
         return false;
     }
@@ -453,7 +449,7 @@ public class StatusAndTiming {
         if (branchStarts.size() != pauseDurations.length) {
             throw new IllegalArgumentException("Mismatched node count and pause duration array: "+branchStarts.size()+","+pauseDurations.length);
         }
-        HashMap<String, TimingInfo> timings = new HashMap<String,TimingInfo>();
+        Map<String, TimingInfo> timings = new HashMap<>();
         for (int i=0; i<branchEnds.size(); i++) {
             BlockStartNode start = branchStarts.get(i);
             FlowNode end = branchEnds.get(i);
@@ -470,31 +466,31 @@ public class StatusAndTiming {
     }
 
     private static Map<String, GenericStatus> coerceStatusMap(Map<String, GenericStatus> newStatusMap) {
-        HashMap<String, GenericStatus> coercedVals = new HashMap<String, GenericStatus>(newStatusMap.size());
+        Map<String, GenericStatus> coercedVals = new HashMap<>(newStatusMap.size());
         for (Map.Entry<String, GenericStatus> oldEntry : newStatusMap.entrySet()) {
             coercedVals.put(oldEntry.getKey(), coerceStatusApi(oldEntry.getValue(), API_V1));
         }
         return coercedVals;
     }
 
-    @Nonnull
-    @Deprecated
     /** Get statuses for each branch - note: some statuses may be null. Retains compatibility with the original GenericStatus values.
      *  Use {@link #computeBranchStatuses2(WorkflowRun, ParallelMemoryFlowChunk)} once you have a solid way to support new status codings.
      */
+    @Nonnull
+    @Deprecated
     public static Map<String, GenericStatus> computeBranchStatuses(@Nonnull WorkflowRun run, @Nonnull ParallelMemoryFlowChunk parallel) {
         return coerceStatusMap(computeBranchStatuses2(run, parallel));
     }
 
 
 
-    @Nonnull
     /** Get statuses for each branch - note: some statuses may be null, API consumers MUST use {@link #coerceStatusApi(GenericStatus, StatusApiVersion)} on outputs
      *  to safely handle addition of new statuses. */
+    @Nonnull
     public static Map<String, GenericStatus> computeBranchStatuses2(@Nonnull WorkflowRun run, @Nonnull ParallelMemoryFlowChunk parallel) {
         Map<String,MemoryFlowChunk> branches = parallel.getBranches();
-        List<BlockStartNode> starts = new ArrayList<BlockStartNode>(branches.size());
-        List<FlowNode> ends = new ArrayList<FlowNode>(branches.size());
+        List<BlockStartNode> starts = new ArrayList<>(branches.size());
+        List<FlowNode> ends = new ArrayList<>(branches.size());
         // We can optimize this if needed by not fetching the LabelAction below
         for (MemoryFlowChunk chunk : branches.values()) {
             starts.add((BlockStartNode)chunk.getFirstNode());
@@ -542,7 +538,7 @@ public class StatusAndTiming {
         if (branchStarts.size() != branchEnds.size()) {
             throw new IllegalArgumentException("Mismatched start and stop node counts: "+branchStarts.size()+","+branchEnds.size());
         }
-        HashMap<String, GenericStatus> statusMappings = new HashMap<String, GenericStatus>();
+        Map<String, GenericStatus> statusMappings = new HashMap<>();
         for (int i=0; i<branchEnds.size(); i++) {
             BlockStartNode start = branchStarts.get(i);
             FlowNode end = branchEnds.get(i);
@@ -586,8 +582,8 @@ public class StatusAndTiming {
             return;
         }
         DepthFirstScanner scanner = new DepthFirstScanner();
-        List<FlowNode> sorted = scanner.filteredNodes(exec.getCurrentHeads(), (Predicate) Predicates.alwaysTrue());
-        Collections.sort(sorted, new Comparator<FlowNode>() {
+        List<FlowNode> sorted = scanner.filteredNodes(exec.getCurrentHeads(), Predicates.alwaysTrue());
+        sorted.sort(new Comparator<FlowNode>() {
             @Override
             public int compare(FlowNode node1, FlowNode node2) {
                 int node1Iota = parseIota(node1);
@@ -614,16 +610,11 @@ public class StatusAndTiming {
         System.out.println("Action format: ");
         System.out.println("\t- actionClassName actionDisplayName");
         System.out.println("------------------------------------------------------------------------------------------");
-        Function<FlowNode, String> flowNodeToId = new Function<FlowNode, String>(){
-            @Override
-            public String apply(@Nullable FlowNode input) {
-                return (input != null) ? input.getId() : null;
-            }
-        };
+        Function<FlowNode, String> flowNodeToId = input -> input != null ? input.getId() : null;
         for (FlowNode node : sorted) {
             StringBuilder formatted = new StringBuilder();
             formatted.append('[').append(node.getId()).append(']');
-            formatted.append('{').append(StringUtils.join(Collections2.transform(node.getParents(), flowNodeToId), ',')).append('}');
+            formatted.append('{').append(StringUtils.join(node.getParents().stream().map(flowNodeToId).collect(Collectors.toList()), ',')).append('}');
             if (showTiming) {
                 formatted.append('(');
                 if (node.getAction(TimingAction.class) != null) {

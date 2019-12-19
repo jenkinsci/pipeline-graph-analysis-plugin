@@ -82,7 +82,7 @@ public class StatusAndTimingTest {
     public static BuildWatcher buildWatcher = new BuildWatcher();
 
     // Helper
-    static FlowNode[] getNodes(FlowExecution exec, int[] ids) throws IOException {
+    private static FlowNode[] getNodes(FlowExecution exec, int[] ids) throws IOException {
         FlowNode[] output = new FlowNode[ids.length];
         for (int i=0; i < ids.length; i++) {
             output[i] = exec.getNode(Integer.toString(ids[i]));
@@ -105,7 +105,7 @@ public class StatusAndTimingTest {
     }
 
     // Helper
-    static public long doTiming(FlowExecution exec, int firstNodeId, int nodeAfterEndId) throws  IOException {
+    private static long doTiming(FlowExecution exec, int firstNodeId, int nodeAfterEndId) throws  IOException {
         long startTime = TimingAction.getStartTime(exec.getNode(Integer.toString(firstNodeId)));
         long endTime = TimingAction.getStartTime(exec.getNode(Integer.toString(nodeAfterEndId)));
         return endTime-startTime;
@@ -120,7 +120,7 @@ public class StatusAndTimingTest {
                 "sleep 1 \n" +
                 "echo 'done' \n", true));
 
-        /** Node dump follows, format:
+        /* Node dump follows, format:
          [ID]{parent,ids}(millisSinceStartOfRun) flowClassName displayName [st=startId if a block node]
          Action format:
          - actionClassName actionDisplayName
@@ -191,7 +191,7 @@ public class StatusAndTimingTest {
                 "stage 'first' \n" +
                 "sleep 1 \n" +
                 "error('fails') \n", true));
-        /**  Node dump follows, format:
+        /*  Node dump follows, format:
         [ID]{parent,ids} flowClassName displayName [st=startId if a block node]
         Action format:
         - actionClassName actionDisplayName
@@ -241,7 +241,7 @@ public class StatusAndTimingTest {
                 "branches['fail'] = {error('autofail');}\n" +
                 "parallel branches", true));
 
-        /**
+        /*
          * Node dump from a run follows, format:
          [ID]{parent,ids}(millisSinceStartOfRun) flowClassName displayName [st=startId if a block node]
          Action format: (key actions only)
@@ -288,7 +288,7 @@ public class StatusAndTimingTest {
                 run, exec.getNode("4"), exec.getNode("6"), exec.getNode("12"), exec.getNode("13")));
 
         // Check that branch statuses match
-        List<BlockStartNode> parallelStarts = Arrays.asList((BlockStartNode) (exec.getNode("6")), (BlockStartNode) (exec.getNode("7")));
+        List<BlockStartNode> parallelStarts = Arrays.asList((BlockStartNode) exec.getNode("6"), (BlockStartNode) exec.getNode("7"));
         List<FlowNode> parallelEnds = Arrays.asList(exec.getNode("12"), exec.getNode("10"));
         Map<String, GenericStatus> branchStatuses = StatusAndTiming.computeBranchStatuses2(run, exec.getNode("4"),
                 parallelStarts, parallelEnds,
@@ -296,7 +296,7 @@ public class StatusAndTimingTest {
 
         assertEquals(2, branchStatuses.size());
         String[] branches = {"fail", "success"};
-        List<String> outputBranchList = new ArrayList<String>(branchStatuses.keySet());
+        List<String> outputBranchList = new ArrayList<>(branchStatuses.keySet());
         Collections.sort(outputBranchList);
         Assert.assertArrayEquals(branches, outputBranchList.toArray());
         assertEquals(GenericStatus.FAILURE, branchStatuses.get("fail"));
@@ -310,7 +310,7 @@ public class StatusAndTimingTest {
         Map<String, TimingInfo> branchTimings = StatusAndTiming.computeParallelBranchTimings(
             run, exec.getNode("4"), parallelStarts, parallelEnds, exec.getNode("13"), simulatedPauses
         );
-        outputBranchList = new ArrayList<String>(branchTimings.keySet());
+        outputBranchList = new ArrayList<>(branchTimings.keySet());
         Collections.sort(outputBranchList);
         Assert.assertArrayEquals(branches, outputBranchList.toArray());
 
@@ -353,7 +353,7 @@ public class StatusAndTimingTest {
         long currTime = System.currentTimeMillis();
         TimingInfo tim = StatusAndTiming.computeChunkTiming(
                 run, 0, exec.getNode("2"), exec.getNode("6"), null);
-        assertEquals((double)(currTime-run.getStartTimeInMillis()), (double)(tim.getTotalDurationMillis()), 20.0);
+        assertEquals((double) (currTime - run.getStartTimeInMillis()), (double) tim.getTotalDurationMillis(), 20.0);
         SemaphoreStep.success("wait/1", null);
     }
 
@@ -380,7 +380,7 @@ public class StatusAndTimingTest {
                 run, null, exec.getNode("2"), heads.get(1), null));
         TestVisitor visitor = new TestVisitor();
         scan.setup(heads);
-        scan.visitSimpleChunks(heads, visitor, new NoOpChunkFinder());
+        ForkScanner.visitSimpleChunks(heads, visitor, new NoOpChunkFinder());
         TestVisitor.CallEntry entry = visitor.filteredCallsByType(TestVisitor.CallType.PARALLEL_END).get(0);
         FlowNode endNode = exec.getNode(entry.getNodeId().toString());
         assertEquals("sleep", endNode.getDisplayFunctionName());
@@ -402,7 +402,7 @@ public class StatusAndTimingTest {
                 "branches['success'] = {echo 'succeed'}\n" +
                 "branches['pause'] = { sleep 1; semaphore 'wait'; }\n" +
                 "parallel branches", true));
-        /**
+        /*
          * Node dump follows, format:
          [ID]{parentIds,...} flowNodeClassName displayName [st=startId if a block node]
          Action format:
@@ -444,14 +444,14 @@ public class StatusAndTimingTest {
         assertEquals(GenericStatus.SUCCESS, // All but the in-progress node in the in-progress branch
                 StatusAndTiming.computeChunkStatus2(run, exec.getNode("4"), exec.getNode("7"), exec.getNode("10"), exec.getNode("11")));
 
-        List<BlockStartNode> branchStartNodes = new ArrayList<BlockStartNode>();
-        branchStartNodes.add((BlockStartNode) (exec.getNode("6")));
-        branchStartNodes.add((BlockStartNode) (exec.getNode("7")));
+        List<BlockStartNode> branchStartNodes = new ArrayList<>();
+        branchStartNodes.add((BlockStartNode) exec.getNode("6"));
+        branchStartNodes.add((BlockStartNode) exec.getNode("7"));
         List<FlowNode> branchEndNodes = Arrays.asList(getNodes(exec, new int[]{9, 11}));
 
         // All branch statuses
         Map<String, GenericStatus> statuses = StatusAndTiming.computeBranchStatuses2(run, exec.getNode("4"), branchStartNodes, branchEndNodes, null);
-        assertEquals(new String[]{"pause", "success"}, new TreeSet<String>(statuses.keySet()).toArray());
+        Assert.assertArrayEquals(new String[]{"pause", "success"}, new TreeSet<>(statuses.keySet()).toArray());
         assertEquals(GenericStatus.SUCCESS, statuses.get("success"));
         assertEquals(GenericStatus.IN_PROGRESS, statuses.get("pause"));
 
@@ -462,14 +462,14 @@ public class StatusAndTimingTest {
         // Completed branch uses time from start to end
         TimingInfo time = timings.get("success");
         assertEquals(0, time.getPauseDurationMillis());
-        assertEquals((double)(TimingAction.getStartTime(exec.getNode("9"))-TimingAction.getStartTime(exec.getNode("6"))), (double)(time.getTotalDurationMillis()), 2.0);
+        assertEquals((double) (TimingAction.getStartTime(exec.getNode("9")) - TimingAction.getStartTime(exec.getNode("6"))), (double) time.getTotalDurationMillis(), 2.0);
 
         // In-progress branch uses current time
         time = timings.get("pause");
         assertEquals(0, time.getPauseDurationMillis());
 
         TimingInfo info = StatusAndTiming.computeOverallParallelTiming(run, timings, exec.getNode("4"), null);
-        assertEquals((double)(incompleteBranchTime),(double)(info.getTotalDurationMillis()), 2.0);
+        assertEquals((double) incompleteBranchTime, (double) info.getTotalDurationMillis(), 2.0);
 
         SemaphoreStep.success("wait/1", null);
     }
@@ -487,7 +487,7 @@ public class StatusAndTimingTest {
         while (run.getAction(InputAction.class)==null) {
             e.waitForSuspension();
         }
-        e = (CpsFlowExecution)(run.getExecution());
+        e = (CpsFlowExecution) run.getExecution();
 
         // Check that a pipeline paused on input gets the same status, and timing reflects in-progress node running through to current time
         GenericStatus status = StatusAndTiming.computeChunkStatus2(run, null, e.getNode("2"), e.getNode("5"), null);
@@ -495,7 +495,7 @@ public class StatusAndTimingTest {
         long currentTime = System.currentTimeMillis();
         TimingInfo timing = StatusAndTiming.computeChunkTiming(run, 0L, e.getNode("2"), e.getNode("5"), null);
         long runTime = currentTime - run.getStartTimeInMillis();
-        assertEquals((double) (runTime), (double) (timing.getTotalDurationMillis()), 10.0); // Approx b/c depends on when currentTime gathered
+        assertEquals((double) runTime, (double) timing.getTotalDurationMillis(), 10.0); // Approx b/c depends on when currentTime gathered
 
         // Test the aborted builds are handled right
         run.doTerm();
@@ -529,7 +529,7 @@ public class StatusAndTimingTest {
         while (run.getAction(InputAction.class)==null) {
             e.waitForSuspension();
         }
-        e = (CpsFlowExecution)(run.getExecution());
+        e = (CpsFlowExecution) run.getExecution();
         GenericStatus status = StatusAndTiming.computeChunkStatus2(run, null, e.getNode("13"), e.getNode("13"), null);
         assertEquals(GenericStatus.IN_PROGRESS, status);
 
@@ -625,7 +625,7 @@ public class StatusAndTimingTest {
         WorkflowJob job = j.jenkins.createProject(WorkflowJob.class, "queuedAndParallel");
         j.createSlave("first-agent", "first", null);
 
-        /**
+        /*
             Node dump follows, format:
             [ID]{parent,ids}flowNodeClassName stepDisplayName [st=startId if a block end node]
             ------------------------------------------------------------------------------------------
@@ -678,9 +678,9 @@ public class StatusAndTimingTest {
         CpsFlowExecution execution = (CpsFlowExecution) b1.getExecutionPromise().get();
 
         // Branch start nodes will be consistent across the whole run.
-        List<BlockStartNode> branchStartNodes = new ArrayList<BlockStartNode>();
-        branchStartNodes.add((BlockStartNode) (execution.getNode("7")));
-        branchStartNodes.add((BlockStartNode) (execution.getNode("8")));
+        List<BlockStartNode> branchStartNodes = new ArrayList<>();
+        branchStartNodes.add((BlockStartNode) execution.getNode("7"));
+        branchStartNodes.add((BlockStartNode) execution.getNode("8"));
 
         // Branch end nodes will be recreated later, though.
         List<FlowNode> branchEndNodes = Arrays.asList(getNodes(execution, new int[]{9, 12}));
