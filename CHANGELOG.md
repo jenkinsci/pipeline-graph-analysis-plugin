@@ -1,5 +1,23 @@
 ## Changelog
 
+### 1.11 (02 Jun 2021)
+
+This plugin now requires Jenkins 2.222.4 or newer.
+
+-   [PR #26](https://github.com/jenkinsci/pipeline-graph-analysis-plugin/pull/26)
+    Make StatusAndTiming#findWarningBetween public
+-   [PR #27](https://github.com/jenkinsci/pipeline-graph-analysis-plugin/pull/27)
+    Consistently use sandbox for CpsFlowDefinitions
+-   [PR #28](https://github.com/jenkinsci/pipeline-graph-analysis-plugin/pull/28)
+    Code cleanup; Replace Guava functional primitives with Java API
+-   [PR #29](https://github.com/jenkinsci/pipeline-graph-analysis-plugin/pull/29)
+    Bump plugin parent POM
+-   [PR #30](https://github.com/jenkinsci/pipeline-graph-analysis-plugin/pull/30)
+    Added CHANGELOG
+-   [PR #31](https://github.com/jenkinsci/pipeline-graph-analysis-plugin/pull/31)
+    Bump plugin POM; use plugin BOM
+
+
 ### 1.10 (15 May 2019)
 
 This plugin now requires Jenkins 2.138.4 or newer.
