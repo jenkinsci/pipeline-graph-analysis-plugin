@@ -609,10 +609,10 @@ public class StatusAndTimingTest {
         assertEquals(1, items.length);
         assertEquals(job, items[0].task.getOwnerTask());
         assertTrue(Queue.getInstance().cancel(items[0]));
-        j.assertBuildStatus(Result.FAILURE, j.waitForCompletion(b1));
+        j.assertBuildStatus(Result.ABORTED, j.waitForCompletion(b1));
 
         status = StatusAndTiming.computeChunkStatus2(b1, null, execution.getNode("2"), execution.getNode("5"), null);
-        assertEquals(GenericStatus.FAILURE, status);
+        assertEquals(GenericStatus.ABORTED, status);
 
         stepStart = execution.getNode("5");
         assertNotNull(stepStart);
