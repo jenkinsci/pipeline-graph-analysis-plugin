@@ -1,5 +1,21 @@
 ## Changelog
 
+### 1.12 (22 Nov 2021)
+
+This plugin now requires Jenkins 2.303.3 or newer.
+
+-   [PR #33](https://github.com/jenkinsci/pipeline-graph-analysis-plugin/pull/33)
+    Update and clean up POM, adapt to new dependencies
+-   [PR #34](https://github.com/jenkinsci/pipeline-graph-analysis-plugin/pull/34)
+    Add dependabot
+-   [PR #35](https://github.com/jenkinsci/pipeline-graph-analysis-plugin/pull/35)
+    Use container agent in Jenkinsfile and test with Java 11
+-   [PR #36](https://github.com/jenkinsci/pipeline-graph-analysis-plugin/pull/36)
+    Update BOM from 987.v4ade2e49fe70 to 1008.vb9e22885c9cf
+-   [PR #37](https://github.com/jenkinsci/pipeline-graph-analysis-plugin/pull/37)
+    Bump json from 20190722 to 20210307
+
+
 ### 1.11 (02 Jun 2021)
 
 This plugin now requires Jenkins 2.222.4 or newer.
