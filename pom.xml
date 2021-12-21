@@ -64,7 +64,7 @@
             <dependency>
                 <groupId>org.json</groupId>
                 <artifactId>json</artifactId>
-                <version>20210307</version>
+                <version>20211205</version>
             </dependency>
             <dependency> <!-- TODO pending https://github.com/jenkinsci/bom/pull/716 -->
                 <groupId>org.jenkins-ci.plugins.workflow</groupId>
