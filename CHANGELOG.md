@@ -1,5 +1,7 @@
 ## Changelog
 
+- For newer versions, see [GitHub Releases](https://github.com/jenkinsci/pipeline-graph-analysis-plugin/releases)
+
 ### 1.12 (22 Nov 2021)
 
 This plugin now requires Jenkins 2.303.3 or newer.
