@@ -11,8 +11,8 @@ import org.jenkinsci.plugins.workflow.graph.StepNode;
 import org.jenkinsci.plugins.workflow.graphanalysis.ChunkFinder;
 import org.jenkinsci.plugins.workflow.support.steps.StageStep;
 
-import javax.annotation.CheckForNull;
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.CheckForNull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 
 /**
  * Finds both block-scoped and legacy stages
@@ -26,7 +26,7 @@ public class StageChunkFinder implements ChunkFinder {
     }
 
     @Override
-    public boolean isChunkStart(@Nonnull FlowNode current, @CheckForNull FlowNode previous) {
+    public boolean isChunkStart(@NonNull FlowNode current, @CheckForNull FlowNode previous) {
         if ((current instanceof StepAtomNode || current instanceof StepStartNode) && !(((StepNode) current).getDescriptor() instanceof StageStep.DescriptorImpl)) {
             // Faster than looking at actions
             return false;
@@ -44,7 +44,7 @@ public class StageChunkFinder implements ChunkFinder {
 
     /** End is where you have a label marker before it... or  */
     @Override
-    public boolean isChunkEnd(@Nonnull FlowNode current, @CheckForNull FlowNode previous) {
+    public boolean isChunkEnd(@NonNull FlowNode current, @CheckForNull FlowNode previous) {
         // First a block-scoped stage
         if (current instanceof StepEndNode && ((StepEndNode) current).getDescriptor() instanceof StageStep.DescriptorImpl) {
             // We have to look for the labelaction because block-scoped stage creates two nested blocks

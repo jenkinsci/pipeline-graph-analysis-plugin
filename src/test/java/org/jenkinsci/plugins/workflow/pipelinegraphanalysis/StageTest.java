@@ -12,7 +12,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.jvnet.hudson.test.JenkinsRule;
 
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
@@ -35,7 +35,7 @@ public class StageTest {
         }
 
         @Override
-        protected void handleChunkDone(@Nonnull MemoryFlowChunk chunk) {
+        protected void handleChunkDone(@NonNull MemoryFlowChunk chunk) {
             allChunks.push(chunk);
             this.chunk = new MemoryFlowChunk();
         }
