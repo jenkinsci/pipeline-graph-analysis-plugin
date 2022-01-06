@@ -55,8 +55,8 @@ import org.jenkinsci.plugins.workflow.support.steps.input.InputStepExecution;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.DoNotUse;
 
-import javax.annotation.CheckForNull;
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.CheckForNull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -144,7 +144,7 @@ public class StatusAndTiming {
      * @param nodes Nodes to match to run
      * @throws IllegalArgumentException For the first flownode that doesn't belong to the FlowExecution of run
      */
-    public static void verifySameRun(@Nonnull WorkflowRun run, @CheckForNull FlowNode... nodes) throws IllegalArgumentException {
+    public static void verifySameRun(@NonNull WorkflowRun run, @CheckForNull FlowNode... nodes) throws IllegalArgumentException {
         if (nodes == null || nodes.length == 0) {
             return;
         }
@@ -191,7 +191,7 @@ public class StatusAndTiming {
      */
     @CheckForNull
     @Deprecated
-    public static GenericStatus computeChunkStatus(@Nonnull WorkflowRun run, @Nonnull MemoryFlowChunk chunk) {
+    public static GenericStatus computeChunkStatus(@NonNull WorkflowRun run, @NonNull MemoryFlowChunk chunk) {
         GenericStatus newStatusEnum = computeChunkStatus2(run, chunk);
         return coerceStatusApi(newStatusEnum, API_V1);
     }
@@ -205,7 +205,7 @@ public class StatusAndTiming {
      * @return Status or null if not executed all (null FlowExecution)
      */
     @CheckForNull
-    public static GenericStatus computeChunkStatus2(@Nonnull WorkflowRun run, @Nonnull MemoryFlowChunk chunk) {
+    public static GenericStatus computeChunkStatus2(@NonNull WorkflowRun run, @NonNull MemoryFlowChunk chunk) {
         FlowExecution exec = run.getExecution();
         if (exec == null) {
             return null;
@@ -225,9 +225,9 @@ public class StatusAndTiming {
      */
     @CheckForNull
     @Deprecated
-    public static GenericStatus computeChunkStatus(@Nonnull WorkflowRun run,
-                                                    @CheckForNull FlowNode before, @Nonnull FlowNode firstNode,
-                                                    @Nonnull FlowNode lastNode, @CheckForNull FlowNode after) {
+    public static GenericStatus computeChunkStatus(@NonNull WorkflowRun run,
+                                                    @CheckForNull FlowNode before, @NonNull FlowNode firstNode,
+                                                    @NonNull FlowNode lastNode, @CheckForNull FlowNode after) {
         GenericStatus newStatusEnum = computeChunkStatus2(run, before, firstNode, lastNode, after);
         return (newStatusEnum == GenericStatus.QUEUED) ? GenericStatus.IN_PROGRESS : newStatusEnum;
     }
@@ -247,9 +247,9 @@ public class StatusAndTiming {
      * @return Status for the piece, or null if the FlowExecution is null.
      */
     @CheckForNull
-    public static GenericStatus computeChunkStatus2(@Nonnull WorkflowRun run,
-                                                    @CheckForNull FlowNode before, @Nonnull FlowNode firstNode,
-                                                    @Nonnull FlowNode lastNode, @CheckForNull FlowNode after) {
+    public static GenericStatus computeChunkStatus2(@NonNull WorkflowRun run,
+                                                    @CheckForNull FlowNode before, @NonNull FlowNode firstNode,
+                                                    @NonNull FlowNode lastNode, @CheckForNull FlowNode after) {
         FlowExecution exec = run.getExecution();
         verifySameRun(run, before, firstNode, lastNode, after);
         if (exec == null) {
@@ -319,7 +319,7 @@ public class StatusAndTiming {
      * @param end The flow node to end on
      * @return a possibly null {@link WarningAction} with the worst result
      */
-    public static @CheckForNull WarningAction findWorstWarningBetween(@Nonnull FlowNode start, @Nonnull FlowNode end) {
+    public static @CheckForNull WarningAction findWorstWarningBetween(@NonNull FlowNode start, @NonNull FlowNode end) {
         if (DISABLE_WARNING_ACTION_LOOKUP) {
             return null;
         }
@@ -346,7 +346,7 @@ public class StatusAndTiming {
     }
 
     @CheckForNull
-    public static TimingInfo computeChunkTiming(@Nonnull WorkflowRun run, long internalPauseDuration, @Nonnull MemoryFlowChunk chunk) {
+    public static TimingInfo computeChunkTiming(@NonNull WorkflowRun run, long internalPauseDuration, @NonNull MemoryFlowChunk chunk) {
         return computeChunkTiming(run, internalPauseDuration, chunk.getFirstNode(), chunk.getLastNode(), chunk.getNodeAfter());
     }
 
@@ -362,9 +362,9 @@ public class StatusAndTiming {
      * @return Best guess at timing, or null if we can't compute anything (no FlowExecution exists)
      */
     @CheckForNull
-    public static TimingInfo computeChunkTiming(@Nonnull WorkflowRun run, long internalPauseDuration,
-                                        @Nonnull FlowNode firstNode,
-                                        @Nonnull FlowNode lastNode, @CheckForNull FlowNode after) {
+    public static TimingInfo computeChunkTiming(@NonNull WorkflowRun run, long internalPauseDuration,
+                                        @NonNull FlowNode firstNode,
+                                        @NonNull FlowNode lastNode, @CheckForNull FlowNode after) {
         FlowExecution exec = run.getExecution();
         if (exec == null) {
             return null; // Haven't begun execution, or execution was hard-killed, timing is invalid
@@ -404,9 +404,9 @@ public class StatusAndTiming {
      * @return
      */
     @CheckForNull
-    public static TimingInfo computeOverallParallelTiming(@Nonnull WorkflowRun run,
-                                                          @Nonnull Map<String, TimingInfo> branchTimings,
-                                                          @Nonnull FlowNode parallelStart, @CheckForNull FlowNode parallelEnd) {
+    public static TimingInfo computeOverallParallelTiming(@NonNull WorkflowRun run,
+                                                          @NonNull Map<String, TimingInfo> branchTimings,
+                                                          @NonNull FlowNode parallelStart, @CheckForNull FlowNode parallelEnd) {
         long overallDuration = 0;
         long maxPause = 0;
         boolean isIncomplete = parallelEnd == null || run.isBuilding();
@@ -433,13 +433,13 @@ public class StatusAndTiming {
      * @param pauseDurations Accumulated pause durations for each of the branches, in order
      * @return Map of branch name to timing.
      */
-    @Nonnull
-    public static Map<String, TimingInfo> computeParallelBranchTimings(@Nonnull WorkflowRun run,
-                                                                       @Nonnull FlowNode parallelStart,
-                                                                       @Nonnull List<BlockStartNode> branchStarts,
-                                                                       @Nonnull List<FlowNode> branchEnds,
+    @NonNull
+    public static Map<String, TimingInfo> computeParallelBranchTimings(@NonNull WorkflowRun run,
+                                                                       @NonNull FlowNode parallelStart,
+                                                                       @NonNull List<BlockStartNode> branchStarts,
+                                                                       @NonNull List<FlowNode> branchEnds,
                                                                        @CheckForNull FlowNode parallelEnd,
-                                                                       @Nonnull long[] pauseDurations) {
+                                                                       @NonNull long[] pauseDurations) {
 
         verifySameRun(run, branchStarts.toArray(new FlowNode[0]));
         verifySameRun(run, branchEnds.toArray(new FlowNode[0]));
@@ -476,9 +476,9 @@ public class StatusAndTiming {
     /** Get statuses for each branch - note: some statuses may be null. Retains compatibility with the original GenericStatus values.
      *  Use {@link #computeBranchStatuses2(WorkflowRun, ParallelMemoryFlowChunk)} once you have a solid way to support new status codings.
      */
-    @Nonnull
+    @NonNull
     @Deprecated
-    public static Map<String, GenericStatus> computeBranchStatuses(@Nonnull WorkflowRun run, @Nonnull ParallelMemoryFlowChunk parallel) {
+    public static Map<String, GenericStatus> computeBranchStatuses(@NonNull WorkflowRun run, @NonNull ParallelMemoryFlowChunk parallel) {
         return coerceStatusMap(computeBranchStatuses2(run, parallel));
     }
 
@@ -486,8 +486,8 @@ public class StatusAndTiming {
 
     /** Get statuses for each branch - note: some statuses may be null, API consumers MUST use {@link #coerceStatusApi(GenericStatus, StatusApiVersion)} on outputs
      *  to safely handle addition of new statuses. */
-    @Nonnull
-    public static Map<String, GenericStatus> computeBranchStatuses2(@Nonnull WorkflowRun run, @Nonnull ParallelMemoryFlowChunk parallel) {
+    @NonNull
+    public static Map<String, GenericStatus> computeBranchStatuses2(@NonNull WorkflowRun run, @NonNull ParallelMemoryFlowChunk parallel) {
         Map<String,MemoryFlowChunk> branches = parallel.getBranches();
         List<BlockStartNode> starts = new ArrayList<>(branches.size());
         List<FlowNode> ends = new ArrayList<>(branches.size());
@@ -504,11 +504,11 @@ public class StatusAndTiming {
      *   to protect against changes.
      */
     @Deprecated
-    @Nonnull
-    public static Map<String, GenericStatus> computeBranchStatuses(@Nonnull WorkflowRun run,
-                                                                    @Nonnull FlowNode parallelStart,
-                                                                    @Nonnull List<BlockStartNode> branchStarts,
-                                                                    @Nonnull List<FlowNode> branchEnds,
+    @NonNull
+    public static Map<String, GenericStatus> computeBranchStatuses(@NonNull WorkflowRun run,
+                                                                    @NonNull FlowNode parallelStart,
+                                                                    @NonNull List<BlockStartNode> branchStarts,
+                                                                    @NonNull List<FlowNode> branchEnds,
                                                                     @CheckForNull FlowNode parallelEnd) {
         return coerceStatusMap(computeBranchStatuses2(run, parallelStart, branchStarts, branchEnds, parallelEnd));
     }
@@ -526,11 +526,11 @@ public class StatusAndTiming {
      * @param parallelEnd End node for the overall parallelBlock (null if not complete)
      * @return Map of branch name to its status
      */
-    @Nonnull
-    public static Map<String, GenericStatus> computeBranchStatuses2(@Nonnull WorkflowRun run,
-                                                                    @Nonnull FlowNode parallelStart,
-                                                                    @Nonnull List<BlockStartNode> branchStarts,
-                                                                    @Nonnull List<FlowNode> branchEnds,
+    @NonNull
+    public static Map<String, GenericStatus> computeBranchStatuses2(@NonNull WorkflowRun run,
+                                                                    @NonNull FlowNode parallelStart,
+                                                                    @NonNull List<BlockStartNode> branchStarts,
+                                                                    @NonNull List<FlowNode> branchEnds,
                                                                     @CheckForNull FlowNode parallelEnd) {
         verifySameRun(run, branchStarts.toArray(new FlowNode[0]));
         verifySameRun(run, branchEnds.toArray(new FlowNode[0]));
@@ -560,7 +560,7 @@ public class StatusAndTiming {
      * @return Status, or null if none can be defined
      */
     @CheckForNull
-    public static GenericStatus condenseStatus(@Nonnull Collection<GenericStatus> statuses) {
+    public static GenericStatus condenseStatus(@NonNull Collection<GenericStatus> statuses) {
         if (statuses.isEmpty()) {
             return null;
         }
@@ -575,7 +575,7 @@ public class StatusAndTiming {
      * @param showActions
      */
     @Restricted(DoNotUse.class)
-    public static void printNodes(@Nonnull WorkflowRun run, boolean showTiming, boolean showActions) {
+    public static void printNodes(@NonNull WorkflowRun run, boolean showTiming, boolean showActions) {
         long runStartTime = run.getStartTimeInMillis();
         FlowExecution exec = run.getExecution();
         if (exec == null) {
