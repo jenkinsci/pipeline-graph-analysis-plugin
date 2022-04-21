@@ -371,6 +371,7 @@ public class StatusAndTimingTest {
         WorkflowJob job = j.jenkins.createProject(WorkflowJob.class, "parallelTimes");
         job.setDefinition(new CpsFlowDefinition(jobScript, true));
         WorkflowRun run = job.scheduleBuild2(0).getStartCondition().get();
+        try {
         Thread.sleep(4000);  // We need the short branch to be complete so we know timing should exceed its duration
         FlowExecution exec = run.getExecution();
         List<FlowNode> heads = exec.getCurrentHeads();
@@ -388,9 +389,9 @@ public class StatusAndTimingTest {
         // Finally, the heart of the matter: test computing durations
         TimingInfo times = StatusAndTiming.computeChunkTiming(run, 0, exec.getNode("2"), exec.getNode(entry.getNodeId().toString()), null);
         assertTrue("Underestimated duration", times.getTotalDurationMillis() >= 3000);
-
-        j.waitForCompletion(run);
-        j.assertBuildStatusSuccess(run);
+        } finally {
+            j.assertBuildStatusSuccess(j.waitForCompletion(run));
+        }
     }
 
     @Test
@@ -429,6 +430,7 @@ public class StatusAndTimingTest {
          [11]{10}StepAtomNode Test step
          */
         WorkflowRun run = job.scheduleBuild2(0).getStartCondition().get();
+        try {
         SemaphoreStep.waitForStart("wait/1", run);
         FlowExecution exec = run.getExecution();
 
@@ -472,6 +474,9 @@ public class StatusAndTimingTest {
         assertEquals((double) incompleteBranchTime, (double) info.getTotalDurationMillis(), 2.0);
 
         SemaphoreStep.success("wait/1", null);
+        } finally {
+            j.assertBuildStatusSuccess(j.waitForCompletion(run));
+        }
     }
 
     @Test
@@ -671,6 +676,7 @@ public class StatusAndTimingTest {
                 "}\n", true));
 
         WorkflowRun b1 = job.scheduleBuild2(0).waitForStart();
+        try {
         SemaphoreStep.waitForStart("wait-b/1", b1);
 
         j.waitForMessage("Still waiting to schedule task", b1);
@@ -725,7 +731,9 @@ public class StatusAndTimingTest {
         assertEquals(GenericStatus.IN_PROGRESS, StatusAndTiming.condenseStatus(statuses.values()));
 
         SemaphoreStep.success("wait-a/1", null);
-        j.assertBuildStatusSuccess(j.waitForCompletion(b1));
+        } finally {
+            j.assertBuildStatusSuccess(j.waitForCompletion(b1));
+        }
     }
 
     @Test
