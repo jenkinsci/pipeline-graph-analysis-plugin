@@ -116,7 +116,7 @@ public class StatusAndTimingTest {
         WorkflowJob job = j.jenkins.createProject(WorkflowJob.class, "Passes");
         job.setDefinition(new CpsFlowDefinition("" +
                 "sleep 1 \n" +
-                "stage 'first' \n" +
+                "echo 'first stage' \n" +
                 "sleep 1 \n" +
                 "echo 'done' \n", true));
 
@@ -188,7 +188,7 @@ public class StatusAndTimingTest {
         WorkflowJob job = j.jenkins.createProject(WorkflowJob.class, "Fails");
         job.setDefinition(new CpsFlowDefinition("" +
                 "sleep 1 \n" +
-                "stage 'first' \n" +
+                "echo 'first stage' \n" +
                 "sleep 1 \n" +
                 "error('fails') \n", true));
         /*  Node dump follows, format:
@@ -235,7 +235,7 @@ public class StatusAndTimingTest {
     public void testBasicParallelFail() throws Exception {
         WorkflowJob job = j.jenkins.createProject(WorkflowJob.class, "Fails");
         job.setDefinition(new CpsFlowDefinition("" +
-                "stage 'primero'\n" +
+                "echo 'primero stage'\n" +
                 "def branches = ['failFast': false]\n" +
                 "branches['success'] = {sleep 1; echo 'succeed'}\n" +
                 "branches['fail'] = {error('autofail');}\n" +
@@ -342,7 +342,7 @@ public class StatusAndTimingTest {
         WorkflowJob job = j.jenkins.createProject(WorkflowJob.class, "Fails");
         job.setDefinition(new CpsFlowDefinition("" +
                 "sleep 1 \n" +
-                "stage 'first' \n" +
+                "echo 'first stage' \n" +
                 "sleep 1 \n" +
                 "semaphore('wait') \n", true));
         WorkflowRun run = job.scheduleBuild2(0).getStartCondition().get();
@@ -362,7 +362,7 @@ public class StatusAndTimingTest {
     public void timingTest() throws Exception {
         // Problem here: for runs in progress we should be using current time if they're the last run node, aka the in-progress node
         String jobScript = ""+
-                "stage 'first'\n" +
+                "echo 'first stage'\n" +
                 "parallel 'long' : { sleep 10; }, \n" +
                 "         'short': { sleep 2; }";
 
@@ -398,7 +398,7 @@ public class StatusAndTimingTest {
     public void testInProgressParallel() throws Exception {
         WorkflowJob job = j.jenkins.createProject(WorkflowJob.class, "Fails");
         job.setDefinition(new CpsFlowDefinition("" +
-                "stage 'primero'\n" +
+                "echo 'primero stage'\n" +
                 "def branches = ['failFast': false]\n" +
                 "branches['success'] = {echo 'succeed'}\n" +
                 "branches['pause'] = { sleep 1; semaphore 'wait'; }\n" +
@@ -483,7 +483,7 @@ public class StatusAndTimingTest {
     public void inputTest() throws Exception {
         WorkflowJob job = j.jenkins.createProject(WorkflowJob.class, "InputJob");
         job.setDefinition(new CpsFlowDefinition("" + // FlowStartNode: ID 2
-                "stage 'first' \n" + // FlowNode 3
+                "echo 'first stage' \n" + // FlowNode 3
                 "echo 'print something' \n" + // FlowNode 4
                 "input 'prompt' \n", true));  // FlowNode 5, end node will be #6
         QueueTaskFuture<WorkflowRun> buildTask = job.scheduleBuild2(0);
