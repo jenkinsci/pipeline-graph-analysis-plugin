@@ -355,6 +355,7 @@ public class StatusAndTimingTest {
                 run, 0, exec.getNode("2"), exec.getNode("6"), null);
         assertEquals((double) (currTime - run.getStartTimeInMillis()), (double) tim.getTotalDurationMillis(), 20.0);
         SemaphoreStep.success("wait/1", null);
+        j.waitForCompletion(run);
     }
 
 
