@@ -364,7 +364,7 @@ public class StatusAndTimingTest {
         // Problem here: for runs in progress we should be using current time if they're the last run node, aka the in-progress node
         String jobScript = ""+
                 "echo 'first stage'\n" +
-                "parallel 'long' : { sleep 10; }, \n" +
+                "parallel 'long' : { sleep 30; }, \n" +
                 "         'short': { sleep 2; }";
 
         // This must be amateur science fiction because the exposition for the setting goes on FOREVER
@@ -373,7 +373,7 @@ public class StatusAndTimingTest {
         job.setDefinition(new CpsFlowDefinition(jobScript, true));
         WorkflowRun run = job.scheduleBuild2(0).getStartCondition().get();
         try {
-        Thread.sleep(4000);  // We need the short branch to be complete so we know timing should exceed its duration
+        Thread.sleep(12000);  // We need the short branch to be complete so we know timing should exceed its duration
         FlowExecution exec = run.getExecution();
         List<FlowNode> heads = exec.getCurrentHeads();
         assertEquals(GenericStatus.IN_PROGRESS, StatusAndTiming.computeChunkStatus2(
