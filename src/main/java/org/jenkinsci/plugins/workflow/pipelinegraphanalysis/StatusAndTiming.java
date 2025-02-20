@@ -302,8 +302,11 @@ public class StatusAndTiming {
             }
         }
         WarningAction warning = findWorstWarningBetween(firstNode, lastNode);
-        if (warning != null) {
-            return GenericStatus.fromResult(warning.getResult());
+        Result result = run.getResult();
+        if (warning != null && result != null) {
+            if(!result.toString().equalsIgnoreCase(GenericStatus.SUCCESS.toString())) {
+                return GenericStatus.fromResult(warning.getResult());
+            }
         }
 
         // Previous chunk before end. If flow continued beyond this, it didn't fail.
