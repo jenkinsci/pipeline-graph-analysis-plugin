@@ -32,8 +32,7 @@ public class StageChunkFinder implements ChunkFinder {
             return false;
         } else if (current instanceof BlockEndNode) {
             return false;
-        } else if (current instanceof StepStartNode) {
-            StepStartNode startNode = (StepStartNode)current;
+        } else if (current instanceof StepStartNode startNode) {
             if (!(startNode.getDescriptor() instanceof StageStep.DescriptorImpl)) {
                 return false;
             }
@@ -46,9 +45,9 @@ public class StageChunkFinder implements ChunkFinder {
     @Override
     public boolean isChunkEnd(@NonNull FlowNode current, @CheckForNull FlowNode previous) {
         // First a block-scoped stage
-        if (current instanceof StepEndNode && ((StepEndNode) current).getDescriptor() instanceof StageStep.DescriptorImpl) {
+        if (current instanceof StepEndNode stepEndNode && stepEndNode.getDescriptor() instanceof StageStep.DescriptorImpl) {
             // We have to look for the labelaction because block-scoped stage creates two nested blocks
-            return ((StepEndNode) current).getStartNode().getAction(LabelAction.class) != null;
+            return stepEndNode.getStartNode().getAction(LabelAction.class) != null;
         }
         // Then a marker-scoped stage
         if (previous != null) {
