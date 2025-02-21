@@ -28,7 +28,7 @@ public class StageTest {
     public JenkinsRule jenkinsRule = new JenkinsRule();
 
     public static class CollectingChunkVisitor extends StandardChunkVisitor {
-        Deque<MemoryFlowChunk> allChunks = new ArrayDeque<>();
+        final Deque<MemoryFlowChunk> allChunks = new ArrayDeque<>();
 
         public List<MemoryFlowChunk> getChunks() {
             return new ArrayList<>(allChunks);
@@ -69,20 +69,21 @@ public class StageTest {
     public void testBlockStage() throws Exception {
         WorkflowJob job = jenkinsRule.jenkins.createProject(WorkflowJob.class, "Blocky job");
 
-        job.setDefinition(new CpsFlowDefinition("" +
-                "node {" +
-                "   stage ('Build') { " +
-                "     echo ('Building'); " +
-                "   } \n" +
-                "   stage ('Test') { " +
-                "     echo ('Testing'); " +
-                "   } \n" +
-                "   stage ('Deploy') { " +
-                "     writeFile file: 'file.txt', text:'content'; " +
-                "     archive(includes: 'file.txt'); " +
-                "     echo ('Deploying'); " +
-                "   } \n" +
-                "}", true));
+        job.setDefinition(new CpsFlowDefinition("""
+                \
+                node {\
+                   stage ('Build') { \
+                     echo ('Building'); \
+                   }\s
+                   stage ('Test') { \
+                     echo ('Testing'); \
+                   }\s
+                   stage ('Deploy') { \
+                     writeFile file: 'file.txt', text:'content'; \
+                     archive(includes: 'file.txt'); \
+                     echo ('Deploying'); \
+                   }\s
+                }""", true));
         /*
          * Node dump follows, format:
          [ID]{parent,ids} flowNodeClassName stepDisplayName [st=startId if a block node]

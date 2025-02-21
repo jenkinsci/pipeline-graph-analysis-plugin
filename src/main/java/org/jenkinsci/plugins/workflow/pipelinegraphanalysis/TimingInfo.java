@@ -36,7 +36,7 @@ public class TimingInfo {
         this.startTimeMillis = startTimeMillis;
     }
 
-    public TimingInfo(){
+    public TimingInfo() {
         // Basic constructor
     }
 
