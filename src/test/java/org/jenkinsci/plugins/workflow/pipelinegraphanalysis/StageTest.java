@@ -70,19 +70,18 @@ public class StageTest {
         WorkflowJob job = jenkinsRule.jenkins.createProject(WorkflowJob.class, "Blocky job");
 
         job.setDefinition(new CpsFlowDefinition("""
-                \
-                node {\
-                   stage ('Build') { \
-                     echo ('Building'); \
-                   }\s
-                   stage ('Test') { \
-                     echo ('Testing'); \
-                   }\s
-                   stage ('Deploy') { \
-                     writeFile file: 'file.txt', text:'content'; \
-                     archive(includes: 'file.txt'); \
-                     echo ('Deploying'); \
-                   }\s
+                node {
+                   stage ('Build') {
+                     echo ('Building')
+                   }
+                   stage ('Test') {
+                     echo ('Testing')
+                   }
+                   stage ('Deploy') {
+                     writeFile file: 'file.txt', text:'content'
+                     archive(includes: 'file.txt')
+                     echo ('Deploying')
+                   }
                 }""", true));
         /*
          * Node dump follows, format:

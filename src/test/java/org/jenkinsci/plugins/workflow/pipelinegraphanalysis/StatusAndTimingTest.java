@@ -115,11 +115,10 @@ public class StatusAndTimingTest {
     public void testBasicPass() throws Exception {
         WorkflowJob job = j.jenkins.createProject(WorkflowJob.class, "Passes");
         job.setDefinition(new CpsFlowDefinition("""
-                \
-                sleep 1\s
-                echo 'first stage'\s
-                sleep 1\s
-                echo 'done'\s
+                sleep 1
+                echo 'first stage'
+                sleep 1
+                echo 'done'
                 """, true));
 
         /* Node dump follows, format:
@@ -189,11 +188,10 @@ public class StatusAndTimingTest {
     public void testFail() throws Exception {
         WorkflowJob job = j.jenkins.createProject(WorkflowJob.class, "Fails");
         job.setDefinition(new CpsFlowDefinition("""
-                \
-                sleep 1\s
-                echo 'first stage'\s
-                sleep 1\s
-                error('fails')\s
+                sleep 1
+                echo 'first stage'
+                sleep 1
+                error('fails')
                 """, true));
         /*  Node dump follows, format:
         [ID]{parent,ids} flowClassName displayName [st=startId if a block node]
@@ -239,11 +237,10 @@ public class StatusAndTimingTest {
     public void testBasicParallelFail() throws Exception {
         WorkflowJob job = j.jenkins.createProject(WorkflowJob.class, "Fails");
         job.setDefinition(new CpsFlowDefinition("""
-                \
                 echo 'primero stage'
                 def branches = ['failFast': false]
                 branches['success'] = {sleep 1; echo 'succeed'}
-                branches['fail'] = {error('autofail');}
+                branches['fail'] = {error('autofail')}
                 parallel branches""", true));
 
         /*
@@ -346,11 +343,10 @@ public class StatusAndTimingTest {
     public void testInProgress() throws Exception {
         WorkflowJob job = j.jenkins.createProject(WorkflowJob.class, "Fails");
         job.setDefinition(new CpsFlowDefinition("""
-                \
-                sleep 1\s
-                echo 'first stage'\s
-                sleep 1\s
-                semaphore('wait')\s
+                sleep 1
+                echo 'first stage'
+                sleep 1
+                semaphore('wait')
                 """, true));
         WorkflowRun run = job.scheduleBuild2(0).getStartCondition().get();
         SemaphoreStep.waitForStart("wait/1", run);
@@ -370,10 +366,9 @@ public class StatusAndTimingTest {
     public void timingTest() throws Exception {
         // Problem here: for runs in progress we should be using current time if they're the last run node, aka the in-progress node
         String jobScript = """
-                \
                 echo 'first stage'
-                parallel 'long' : { sleep 30; },\s
-                         'short': { sleep 2; }""";
+                parallel 'long' : {sleep 30},
+                         'short': {sleep 2}""";
 
         // This must be amateur science fiction because the exposition for the setting goes on FOREVER
         ForkScanner scan = new ForkScanner();
@@ -407,11 +402,10 @@ public class StatusAndTimingTest {
     public void testInProgressParallel() throws Exception {
         WorkflowJob job = j.jenkins.createProject(WorkflowJob.class, "Fails");
         job.setDefinition(new CpsFlowDefinition("""
-                \
                 echo 'primero stage'
                 def branches = ['failFast': false]
                 branches['success'] = {echo 'succeed'}
-                branches['pause'] = { sleep 1; semaphore 'wait'; }
+                branches['pause'] = {sleep 1; semaphore 'wait'}
                 parallel branches""", true));
         /*
          * Node dump follows, format:
@@ -736,7 +730,7 @@ public class StatusAndTimingTest {
         SemaphoreStep.waitForStart("wait-a/1", b1);
 
 
-        // Now get the end nodes as of the entry of the semaphore on the branch...
+        // Now get the end nodes as of the entry of the semaphore on the `a` branch...
         branchEndNodes = Arrays.asList(getNodes(execution, new int[]{18, 15}));
 
         statuses = StatusAndTiming.computeBranchStatuses2(b1, execution.getNode("5"), branchStartNodes, branchEndNodes, null);
@@ -757,29 +751,28 @@ public class StatusAndTimingTest {
     public void parallelStagesOneSkipped() throws Exception {
         WorkflowJob job = j.jenkins.createProject(WorkflowJob.class, "parallel stages, one skipped job");
         job.setDefinition(new CpsFlowDefinition("""
-                \
-                pipeline {\s
-                   agent any\s
-                   stages {\s
-                       stage('Run Tests') {\s
-                           parallel {\s
-                               stage('Test on Windows') {\s
-                                   when {\s
-                                       branch 'cake'\s
-                                   }\s
-                                   steps {\s
-                                       echo 'hello world'\s
-                                   }\s
-                               }\s
-                               stage('Test on Linux') {\s
-                                   steps {\s
-                                       echo 'hello world'\s
-                                   }\s
-                               }\s
-                           }\s
-                       }\s
-                   }\s
-                }\s
+                pipeline {
+                   agent any
+                   stages {
+                       stage('Run Tests') {
+                           parallel {
+                               stage('Test on Windows') {
+                                   when {
+                                       branch 'cake'
+                                   }
+                                   steps {
+                                       echo 'hello world'
+                                   }
+                               }
+                               stage('Test on Linux') {
+                                   steps {
+                                       echo 'hello world'
+                                   }
+                               }
+                           }
+                       }
+                   }
+                }
                 """,
                 true));
 
@@ -825,7 +818,7 @@ public class StatusAndTimingTest {
                             error('oops')
                           },
                           succeeds: {
-                            echo 'success'\
+                            echo 'success'
                           }""", true));
         WorkflowRun run = j.assertBuildStatus(Result.FAILURE, job.scheduleBuild2(0));
         StagesAndParallelBranchesVisitor visitor = new StagesAndParallelBranchesVisitor(run);
@@ -845,7 +838,7 @@ public class StatusAndTimingTest {
                           error('oops')
                         },
                         succeeds: {
-                          echo('succeeds')\
+                          echo('succeeds')
                         }
                         """, true));
         WorkflowRun run = j.assertBuildStatus(Result.FAILURE, job.scheduleBuild2(0));
@@ -867,7 +860,7 @@ public class StatusAndTimingTest {
                           echo('foo')
                         }
                         stage('success') {
-                          echo('no problem')\
+                          echo('no problem')
                         }
                         stage('failure') {
                           unstable('second oops')
@@ -915,7 +908,7 @@ public class StatusAndTimingTest {
                           unstable('failure takes priority')
                         }
                         stage('success') {
-                          echo('foo')\
+                          echo('foo')
                         }
                         """, true));
         WorkflowRun run = j.assertBuildStatus(Result.FAILURE, job.scheduleBuild2(0));
