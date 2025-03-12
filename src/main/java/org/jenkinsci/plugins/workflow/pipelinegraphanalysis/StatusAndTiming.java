@@ -167,14 +167,14 @@ public class StatusAndTiming {
         // Logic borrowed from Pipeline Stage View plugin, RuneEx
         InputAction inputAction = run.getAction(InputAction.class);
         if (inputAction != null) {
-            List<InputStepExecution> executions = null;
+            List<InputStepExecution> executions;
             try {
                 executions = inputAction.getExecutions();
-            } catch (InterruptedException|TimeoutException ex) {
+            } catch (InterruptedException | TimeoutException ex) {
                 // Retry on timeout
                 try {
                     executions = inputAction.getExecutions();
-                } catch (InterruptedException|TimeoutException ex2) {
+                } catch (InterruptedException | TimeoutException ex2) {
                     // Assume we can't handle it, and default to most common state of not being an input step.
                     executions = null;
                 }
@@ -210,8 +210,7 @@ public class StatusAndTiming {
         if (exec == null) {
             return null;
         }
-        if (chunk instanceof ParallelMemoryFlowChunk) {
-            ParallelMemoryFlowChunk par = ((ParallelMemoryFlowChunk) chunk);
+        if (chunk instanceof ParallelMemoryFlowChunk par) {
             return condenseStatus(computeBranchStatuses2(run, par).values());
         } else {
             return computeChunkStatus2(run, chunk.getNodeBefore(), chunk.getFirstNode(), chunk.getLastNode(), chunk.getNodeAfter());
@@ -295,8 +294,8 @@ public class StatusAndTiming {
         ErrorAction err = lastNode.getError();
         if (err != null) {
             Throwable rootCause = err.getError();
-            if (rootCause instanceof FlowInterruptedException) {
-                return GenericStatus.fromResult(((FlowInterruptedException) rootCause).getResult());
+            if (rootCause instanceof FlowInterruptedException flowInterruptedException) {
+                return GenericStatus.fromResult(flowInterruptedException.getResult());
             } else {
                 return GenericStatus.FAILURE;
             }
@@ -381,8 +380,8 @@ public class StatusAndTiming {
         // Fudge
         boolean isLastChunk = after == null || exec.isCurrentHead(lastNode);
         if (isLastChunk && run.isBuilding()) {
-            if (exec.getCurrentHeads().size() > 1 && lastNode instanceof BlockEndNode) {  // Check to see if all the action is on other branches
-                BlockStartNode start = ((BlockEndNode)lastNode).getStartNode();
+            if (exec.getCurrentHeads().size() > 1 && lastNode instanceof BlockEndNode blockEndNode) {  // Check to see if all the action is on other branches
+                BlockStartNode start = blockEndNode.getStartNode();
                 if (start.getAction(ThreadNameAction.class) != null) {
                     endTime = TimingAction.getStartTime(lastNode);  // Completed parallel branch, use the block end time
                 }
@@ -456,7 +455,7 @@ public class StatusAndTiming {
         for (int i=0; i<branchEnds.size(); i++) {
             BlockStartNode start = branchStarts.get(i);
             FlowNode end = branchEnds.get(i);
-            if (end instanceof BlockEndNode && start != ((BlockEndNode)end).getStartNode()) {
+            if (end instanceof BlockEndNode blockEndNode && start != blockEndNode.getStartNode()) {
                 throw new IllegalArgumentException("Mismatched parallel branch start/end nodes: "
                         + start.getId()+','
                         + end.getId());
@@ -545,7 +544,7 @@ public class StatusAndTiming {
         for (int i=0; i<branchEnds.size(); i++) {
             BlockStartNode start = branchStarts.get(i);
             FlowNode end = branchEnds.get(i);
-            if (end instanceof BlockEndNode && start != ((BlockEndNode)end).getStartNode()) {
+            if (end instanceof BlockEndNode blockEndNode && start != blockEndNode.getStartNode()) {
                 throw new IllegalArgumentException("Mismatched parallel branch start/end nodes: "
                         + start.getId()+','
                         + end.getId());
@@ -586,7 +585,7 @@ public class StatusAndTiming {
         }
         DepthFirstScanner scanner = new DepthFirstScanner();
         List<FlowNode> sorted = scanner.filteredNodes(exec.getCurrentHeads(), Predicates.alwaysTrue());
-        sorted.sort(new Comparator<FlowNode>() {
+        sorted.sort(new Comparator<>() {
             @Override
             public int compare(FlowNode node1, FlowNode node2) {
                 int node1Iota = parseIota(node1);
@@ -628,8 +627,8 @@ public class StatusAndTiming {
                 formatted.append(')');
             }
             formatted.append(node.getClass().getSimpleName()).append(' ').append(node.getDisplayName());
-            if (node instanceof BlockEndNode) {
-                formatted.append("  [st=").append(((BlockEndNode)node).getStartNode().getId()).append(']');
+            if (node instanceof BlockEndNode blockEndNode) {
+                formatted.append("  [st=").append(blockEndNode.getStartNode().getId()).append(']');
             }
             if (showActions) {
                 for (Action a : node.getActions()) {
