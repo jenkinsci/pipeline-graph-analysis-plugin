@@ -374,14 +374,10 @@ public class StatusAndTiming {
         verifySameRun(run, firstNode, lastNode, after);
         long endTime = (after != null) ? TimingAction.getStartTime(after) : System.currentTimeMillis();
 
-        // Fudge
-        boolean isLastChunk = after == null || exec.isCurrentHead(lastNode);
-        if (isLastChunk && run.isBuilding()) {
-            if (exec.getCurrentHeads().size() > 1 && lastNode instanceof BlockEndNode blockEndNode) {  // Check to see if all the action is on other branches
-                BlockStartNode start = blockEndNode.getStartNode();
-                if (start.getAction(ThreadNameAction.class) != null) {
-                    endTime = TimingAction.getStartTime(lastNode);  // Completed parallel branch, use the block end time
-                }
+        if (lastNode instanceof BlockEndNode blockEndNode) {
+            BlockStartNode start = blockEndNode.getStartNode();
+            if (start.getAction(ThreadNameAction.class) != null) {
+                endTime = TimingAction.getStartTime(lastNode);  // Completed parallel branch, use the block end time
             }
         }
         // What about null startTime???
