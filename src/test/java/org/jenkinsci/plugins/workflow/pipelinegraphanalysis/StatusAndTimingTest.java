@@ -48,13 +48,13 @@ import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 import org.jenkinsci.plugins.workflow.support.steps.input.InputAction;
 import org.jenkinsci.plugins.workflow.test.steps.SemaphoreStep;
-import org.junit.Assert;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.jvnet.hudson.test.BuildWatcher;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+
 import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -64,22 +64,27 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeSet;
-import org.junit.Ignore;
 
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.notNullValue;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
-public class StatusAndTimingTest {
-    @Rule
-    public JenkinsRule j = new JenkinsRule();
-    @ClassRule
-    public static BuildWatcher buildWatcher = new BuildWatcher();
+@WithJenkins
+class StatusAndTimingTest {
+
+    private JenkinsRule j;
+
+    @BeforeEach
+    void setUp(JenkinsRule rule) {
+        j = rule;
+    }
 
     // Helper
     private static FlowNode[] getNodes(FlowExecution exec, int[] ids) throws IOException {
@@ -91,17 +96,17 @@ public class StatusAndTimingTest {
     }
 
     @Test
-    public void testStatusCoercion() {
+    void testStatusCoercion() {
         // Test that we don't modify existing statuses
         for (GenericStatus st : StatusAndTiming.API_V1.getAllowedStatuses()) {
-            Assert.assertEquals(st, StatusAndTiming.coerceStatusApi(st, StatusAndTiming.API_V1));
+            assertEquals(st, StatusAndTiming.coerceStatusApi(st, StatusAndTiming.API_V1));
         }
         // Test that we don't modify statuses of the same API versions
         for (GenericStatus st : StatusAndTiming.API_V2.getAllowedStatuses()) {
-            Assert.assertEquals(st, StatusAndTiming.coerceStatusApi(st, StatusAndTiming.API_V2));
-            Assert.assertTrue(StatusAndTiming.API_V1.getAllowedStatuses().contains(StatusAndTiming.coerceStatusApi(st, StatusAndTiming.API_V1)));
+            assertEquals(st, StatusAndTiming.coerceStatusApi(st, StatusAndTiming.API_V2));
+            assertTrue(StatusAndTiming.API_V1.getAllowedStatuses().contains(StatusAndTiming.coerceStatusApi(st, StatusAndTiming.API_V1)));
         }
-        Assert.assertEquals(GenericStatus.IN_PROGRESS, StatusAndTiming.coerceStatusApi(GenericStatus.QUEUED, StatusAndTiming.API_V1));
+        assertEquals(GenericStatus.IN_PROGRESS, StatusAndTiming.coerceStatusApi(GenericStatus.QUEUED, StatusAndTiming.API_V1));
     }
 
     // Helper
@@ -112,7 +117,7 @@ public class StatusAndTimingTest {
     }
 
     @Test
-    public void testBasicPass() throws Exception {
+    void testBasicPass() throws Exception {
         WorkflowJob job = j.jenkins.createProject(WorkflowJob.class, "Passes");
         job.setDefinition(new CpsFlowDefinition("""
                 sleep 1
@@ -185,7 +190,7 @@ public class StatusAndTimingTest {
 
     /** Tests the assignment of error nodes to flows */
     @Test
-    public void testFail() throws Exception {
+    void testFail() throws Exception {
         WorkflowJob job = j.jenkins.createProject(WorkflowJob.class, "Fails");
         job.setDefinition(new CpsFlowDefinition("""
                 sleep 1
@@ -234,7 +239,7 @@ public class StatusAndTimingTest {
     }
 
     @Test
-    public void testBasicParallelFail() throws Exception {
+    void testBasicParallelFail() throws Exception {
         WorkflowJob job = j.jenkins.createProject(WorkflowJob.class, "Fails");
         job.setDefinition(new CpsFlowDefinition("""
                 echo 'primero stage'
@@ -300,7 +305,7 @@ public class StatusAndTimingTest {
         String[] branches = {"fail", "success"};
         List<String> outputBranchList = new ArrayList<>(branchStatuses.keySet());
         Collections.sort(outputBranchList);
-        Assert.assertArrayEquals(branches, outputBranchList.toArray());
+        assertArrayEquals(branches, outputBranchList.toArray());
         assertEquals(GenericStatus.FAILURE, branchStatuses.get("fail"));
         assertEquals(GenericStatus.SUCCESS, branchStatuses.get("success"));
 
@@ -314,7 +319,7 @@ public class StatusAndTimingTest {
         );
         outputBranchList = new ArrayList<>(branchTimings.keySet());
         Collections.sort(outputBranchList);
-        Assert.assertArrayEquals(branches, outputBranchList.toArray());
+        assertArrayEquals(branches, outputBranchList.toArray());
 
         // Passing branch time, 5 ms pause was a present above
         TimingInfo successTiming = branchTimings.get("success");
@@ -340,7 +345,7 @@ public class StatusAndTimingTest {
     }
 
     @Test
-    public void testInProgress() throws Exception {
+    void testInProgress() throws Exception {
         WorkflowJob job = j.jenkins.createProject(WorkflowJob.class, "Fails");
         job.setDefinition(new CpsFlowDefinition("""
                 sleep 1
@@ -363,7 +368,7 @@ public class StatusAndTimingTest {
 
 
     @Test
-    public void timingTest() throws Exception {
+    void timingTest() throws Exception {
         // Problem here: for runs in progress we should be using current time if they're the last run node, aka the in-progress node
         String jobScript = """
                 echo 'first stage'
@@ -376,30 +381,30 @@ public class StatusAndTimingTest {
         job.setDefinition(new CpsFlowDefinition(jobScript, true));
         WorkflowRun run = job.scheduleBuild2(0).getStartCondition().get();
         try {
-        Thread.sleep(12000);  // We need the short branch to be complete so we know timing should exceed its duration
-        FlowExecution exec = run.getExecution();
-        List<FlowNode> heads = exec.getCurrentHeads();
-        assertEquals(GenericStatus.IN_PROGRESS, StatusAndTiming.computeChunkStatus2(
-                run, null, exec.getNode("2"), heads.get(0), null));
-        assertEquals(GenericStatus.SUCCESS, StatusAndTiming.computeChunkStatus2(
-                run, null, exec.getNode("2"), heads.get(1), null));
-        TestVisitor visitor = new TestVisitor();
-        scan.setup(heads);
-        ForkScanner.visitSimpleChunks(heads, visitor, new NoOpChunkFinder());
-        TestVisitor.CallEntry entry = visitor.filteredCallsByType(TestVisitor.CallType.PARALLEL_END).get(0);
-        FlowNode endNode = exec.getNode(entry.getNodeId().toString());
-        assertEquals("sleep", endNode.getDisplayFunctionName());
+            Thread.sleep(12000);  // We need the short branch to be complete so we know timing should exceed its duration
+            FlowExecution exec = run.getExecution();
+            List<FlowNode> heads = exec.getCurrentHeads();
+            assertEquals(GenericStatus.IN_PROGRESS, StatusAndTiming.computeChunkStatus2(
+                    run, null, exec.getNode("2"), heads.get(0), null));
+            assertEquals(GenericStatus.SUCCESS, StatusAndTiming.computeChunkStatus2(
+                    run, null, exec.getNode("2"), heads.get(1), null));
+            TestVisitor visitor = new TestVisitor();
+            scan.setup(heads);
+            ForkScanner.visitSimpleChunks(heads, visitor, new NoOpChunkFinder());
+            TestVisitor.CallEntry entry = visitor.filteredCallsByType(TestVisitor.CallType.PARALLEL_END).get(0);
+            FlowNode endNode = exec.getNode(entry.getNodeId().toString());
+            assertEquals("sleep", endNode.getDisplayFunctionName());
 
-        // Finally, the heart of the matter: test computing durations
-        TimingInfo times = StatusAndTiming.computeChunkTiming(run, 0, exec.getNode("2"), exec.getNode(entry.getNodeId().toString()), null);
-        assertTrue("Underestimated duration", times.getTotalDurationMillis() >= 3000);
+            // Finally, the heart of the matter: test computing durations
+            TimingInfo times = StatusAndTiming.computeChunkTiming(run, 0, exec.getNode("2"), exec.getNode(entry.getNodeId().toString()), null);
+            assertTrue(times.getTotalDurationMillis() >= 3000, "Underestimated duration");
         } finally {
             j.assertBuildStatusSuccess(j.waitForCompletion(run));
         }
     }
 
     @Test
-    public void testInProgressParallel() throws Exception {
+    void testInProgressParallel() throws Exception {
         WorkflowJob job = j.jenkins.createProject(WorkflowJob.class, "Fails");
         job.setDefinition(new CpsFlowDefinition("""
                 echo 'primero stage'
@@ -435,56 +440,56 @@ public class StatusAndTimingTest {
          */
         WorkflowRun run = job.scheduleBuild2(0).getStartCondition().get();
         try {
-        SemaphoreStep.waitForStart("wait/1", run);
-        FlowExecution exec = run.getExecution();
+            SemaphoreStep.waitForStart("wait/1", run);
+            FlowExecution exec = run.getExecution();
 
-        // Test specific cases for status checking
-        assertEquals(GenericStatus.IN_PROGRESS, // Whole flow, semaphore makes it "in-progress"
-                StatusAndTiming.computeChunkStatus2(run, null, exec.getNode("2"), exec.getNode("11"), null));
-        assertEquals(GenericStatus.SUCCESS, // Completed branch, waiting on parallel semaphore though
-                StatusAndTiming.computeChunkStatus2(run, null, exec.getNode("2"), exec.getNode("9"), null));
-        assertEquals(GenericStatus.SUCCESS, // Completed branch, just the branching bit
-                StatusAndTiming.computeChunkStatus2(run, exec.getNode("4"), exec.getNode("6"), exec.getNode("9"), null));
-        assertEquals(GenericStatus.IN_PROGRESS, // Just the in-progress branch
-                StatusAndTiming.computeChunkStatus2(run, exec.getNode("4"), exec.getNode("7"), exec.getNode("11"), null));
-        assertEquals(GenericStatus.SUCCESS, // All but the in-progress node in the in-progress branch
-                StatusAndTiming.computeChunkStatus2(run, exec.getNode("4"), exec.getNode("7"), exec.getNode("10"), exec.getNode("11")));
+            // Test specific cases for status checking
+            assertEquals(GenericStatus.IN_PROGRESS, // Whole flow, semaphore makes it "in-progress"
+                    StatusAndTiming.computeChunkStatus2(run, null, exec.getNode("2"), exec.getNode("11"), null));
+            assertEquals(GenericStatus.SUCCESS, // Completed branch, waiting on parallel semaphore though
+                    StatusAndTiming.computeChunkStatus2(run, null, exec.getNode("2"), exec.getNode("9"), null));
+            assertEquals(GenericStatus.SUCCESS, // Completed branch, just the branching bit
+                    StatusAndTiming.computeChunkStatus2(run, exec.getNode("4"), exec.getNode("6"), exec.getNode("9"), null));
+            assertEquals(GenericStatus.IN_PROGRESS, // Just the in-progress branch
+                    StatusAndTiming.computeChunkStatus2(run, exec.getNode("4"), exec.getNode("7"), exec.getNode("11"), null));
+            assertEquals(GenericStatus.SUCCESS, // All but the in-progress node in the in-progress branch
+                    StatusAndTiming.computeChunkStatus2(run, exec.getNode("4"), exec.getNode("7"), exec.getNode("10"), exec.getNode("11")));
 
-        List<BlockStartNode> branchStartNodes = new ArrayList<>();
-        branchStartNodes.add((BlockStartNode) exec.getNode("6"));
-        branchStartNodes.add((BlockStartNode) exec.getNode("7"));
-        List<FlowNode> branchEndNodes = Arrays.asList(getNodes(exec, new int[]{9, 11}));
+            List<BlockStartNode> branchStartNodes = new ArrayList<>();
+            branchStartNodes.add((BlockStartNode) exec.getNode("6"));
+            branchStartNodes.add((BlockStartNode) exec.getNode("7"));
+            List<FlowNode> branchEndNodes = Arrays.asList(getNodes(exec, new int[]{9, 11}));
 
-        // All branch statuses
-        Map<String, GenericStatus> statuses = StatusAndTiming.computeBranchStatuses2(run, exec.getNode("4"), branchStartNodes, branchEndNodes, null);
-        Assert.assertArrayEquals(new String[]{"pause", "success"}, new TreeSet<>(statuses.keySet()).toArray());
-        assertEquals(GenericStatus.SUCCESS, statuses.get("success"));
-        assertEquals(GenericStatus.IN_PROGRESS, statuses.get("pause"));
+            // All branch statuses
+            Map<String, GenericStatus> statuses = StatusAndTiming.computeBranchStatuses2(run, exec.getNode("4"), branchStartNodes, branchEndNodes, null);
+            assertArrayEquals(new String[]{"pause", "success"}, new TreeSet<>(statuses.keySet()).toArray());
+            assertEquals(GenericStatus.SUCCESS, statuses.get("success"));
+            assertEquals(GenericStatus.IN_PROGRESS, statuses.get("pause"));
 
-        // Timings
-        long incompleteBranchTime = System.currentTimeMillis()-TimingAction.getStartTime(exec.getNode("7"));
-        Map<String, TimingInfo> timings = StatusAndTiming.computeParallelBranchTimings(run, exec.getNode("4"), branchStartNodes, branchEndNodes, null, new long[]{0, 0});
+            // Timings
+            long incompleteBranchTime = System.currentTimeMillis()-TimingAction.getStartTime(exec.getNode("7"));
+            Map<String, TimingInfo> timings = StatusAndTiming.computeParallelBranchTimings(run, exec.getNode("4"), branchStartNodes, branchEndNodes, null, new long[]{0, 0});
 
-        // Completed branch uses time from start to end
-        TimingInfo time = timings.get("success");
-        assertEquals(0, time.getPauseDurationMillis());
-        assertEquals((double) (TimingAction.getStartTime(exec.getNode("9")) - TimingAction.getStartTime(exec.getNode("6"))), (double) time.getTotalDurationMillis(), 2.0);
+            // Completed branch uses time from start to end
+            TimingInfo time = timings.get("success");
+            assertEquals(0, time.getPauseDurationMillis());
+            assertEquals((double) (TimingAction.getStartTime(exec.getNode("9")) - TimingAction.getStartTime(exec.getNode("6"))), (double) time.getTotalDurationMillis(), 2.0);
 
-        // In-progress branch uses current time
-        time = timings.get("pause");
-        assertEquals(0, time.getPauseDurationMillis());
+            // In-progress branch uses current time
+            time = timings.get("pause");
+            assertEquals(0, time.getPauseDurationMillis());
 
-        TimingInfo info = StatusAndTiming.computeOverallParallelTiming(run, timings, exec.getNode("4"), null);
-        assertEquals((double) incompleteBranchTime, (double) info.getTotalDurationMillis(), 2.0);
+            TimingInfo info = StatusAndTiming.computeOverallParallelTiming(run, timings, exec.getNode("4"), null);
+            assertEquals((double) incompleteBranchTime, (double) info.getTotalDurationMillis(), 2.0);
 
-        SemaphoreStep.success("wait/1", null);
+            SemaphoreStep.success("wait/1", null);
         } finally {
             j.assertBuildStatusSuccess(j.waitForCompletion(run));
         }
     }
 
     @Test
-    public void inputTest() throws Exception {
+    void inputTest() throws Exception {
         WorkflowJob job = j.jenkins.createProject(WorkflowJob.class, "InputJob");
         job.setDefinition(new CpsFlowDefinition("" + // FlowStartNode: ID 2
                 "echo 'first stage' \n" + // FlowNode 3
@@ -515,10 +520,10 @@ public class StatusAndTimingTest {
     }
 
     @Test
-    public void busyStepTest() throws Exception {
+    void busyStepTest() throws Exception {
         WorkflowJob job = j.jenkins.createProject(WorkflowJob.class, "InputJob");
         String sleep = "sh 'sleep 10000'\n";
-        if(SystemUtils.IS_OS_WINDOWS){
+        if (SystemUtils.IS_OS_WINDOWS){
             sleep = "bat 'timeout /t 30'\n";
         }
         job.setDefinition(new CpsFlowDefinition("node {\n" +
@@ -553,7 +558,7 @@ public class StatusAndTimingTest {
 
     @Issue("JENKINS-44981")
     @Test
-    public void queuedAndRunningOnAgent() throws Exception {
+    void queuedAndRunningOnAgent() throws Exception {
         WorkflowJob job = j.jenkins.createProject(WorkflowJob.class, "queuedAndRunning");
         job.setDefinition(new CpsFlowDefinition("""
                 stage('some-stage') {
@@ -594,7 +599,7 @@ public class StatusAndTimingTest {
 
     @Issue("JENKINS-44981")
     @Test
-    public void queuedAndCanceled() throws Exception {
+    void queuedAndCanceled() throws Exception {
         WorkflowJob job = j.jenkins.createProject(WorkflowJob.class, "queuedAndCanceled");
         job.setDefinition(new CpsFlowDefinition("""
                 stage('some-stage') {
@@ -634,7 +639,7 @@ public class StatusAndTimingTest {
 
     @Issue("JENKINS-44981")
     @Test
-    public void queuedAndParallel() throws Exception {
+    void queuedAndParallel() throws Exception {
         WorkflowJob job = j.jenkins.createProject(WorkflowJob.class, "queuedAndParallel");
         j.createSlave("first-agent", "first", null);
 
@@ -687,60 +692,60 @@ public class StatusAndTimingTest {
 
         WorkflowRun b1 = job.scheduleBuild2(0).waitForStart();
         try {
-        SemaphoreStep.waitForStart("wait-b/1", b1);
+            SemaphoreStep.waitForStart("wait-b/1", b1);
 
-        j.waitForMessage("Still waiting to schedule task", b1);
+            j.waitForMessage("Still waiting to schedule task", b1);
 
-        CpsFlowExecution execution = (CpsFlowExecution) b1.getExecutionPromise().get();
+            CpsFlowExecution execution = (CpsFlowExecution) b1.getExecutionPromise().get();
 
-        // Branch start nodes will be consistent across the whole run.
-        List<BlockStartNode> branchStartNodes = new ArrayList<>();
-        branchStartNodes.add((BlockStartNode) execution.getNode("7"));
-        branchStartNodes.add((BlockStartNode) execution.getNode("8"));
+            // Branch start nodes will be consistent across the whole run.
+            List<BlockStartNode> branchStartNodes = new ArrayList<>();
+            branchStartNodes.add((BlockStartNode) execution.getNode("7"));
+            branchStartNodes.add((BlockStartNode) execution.getNode("8"));
 
-        // Branch end nodes will be recreated later, though.
-        List<FlowNode> branchEndNodes = Arrays.asList(getNodes(execution, new int[]{9, 12}));
+            // Branch end nodes will be recreated later, though.
+            List<FlowNode> branchEndNodes = Arrays.asList(getNodes(execution, new int[]{9, 12}));
 
-        // All branch statuses
-        Map<String, GenericStatus> statuses = StatusAndTiming.computeBranchStatuses2(b1, execution.getNode("5"), branchStartNodes, branchEndNodes, null);
+            // All branch statuses
+            Map<String, GenericStatus> statuses = StatusAndTiming.computeBranchStatuses2(b1, execution.getNode("5"), branchStartNodes, branchEndNodes, null);
 
-        assertNotNull(statuses);
-        assertEquals(GenericStatus.QUEUED, statuses.get("a"));
-        assertEquals(GenericStatus.IN_PROGRESS, statuses.get("b"));
-        assertEquals(GenericStatus.IN_PROGRESS, StatusAndTiming.condenseStatus(statuses.values()));
+            assertNotNull(statuses);
+            assertEquals(GenericStatus.QUEUED, statuses.get("a"));
+            assertEquals(GenericStatus.IN_PROGRESS, statuses.get("b"));
+            assertEquals(GenericStatus.IN_PROGRESS, StatusAndTiming.condenseStatus(statuses.values()));
 
-        FlowNode stepStart = execution.getNode("9");
-        assertNotNull(stepStart);
-        assertEquals(QueueItemAction.QueueState.QUEUED, QueueItemAction.getNodeState(stepStart));
+            FlowNode stepStart = execution.getNode("9");
+            assertNotNull(stepStart);
+            assertEquals(QueueItemAction.QueueState.QUEUED, QueueItemAction.getNodeState(stepStart));
 
-        SemaphoreStep.success("wait-b/1", null);
-        // Sleep to make sure we get the b branch end node...
-        Thread.sleep(1000);
-        // Now get the end nodes as of the end of the b branch...
-        branchEndNodes = Arrays.asList(getNodes(execution, new int[]{9, 15}));
+            SemaphoreStep.success("wait-b/1", null);
+            // Sleep to make sure we get the b branch end node...
+            Thread.sleep(1000);
+            // Now get the end nodes as of the end of the b branch...
+            branchEndNodes = Arrays.asList(getNodes(execution, new int[]{9, 15}));
 
-        statuses = StatusAndTiming.computeBranchStatuses2(b1, execution.getNode("5"), branchStartNodes, branchEndNodes, null);
+            statuses = StatusAndTiming.computeBranchStatuses2(b1, execution.getNode("5"), branchStartNodes, branchEndNodes, null);
 
-        assertNotNull(statuses);
-        assertEquals(GenericStatus.QUEUED, statuses.get("a"));
-        assertEquals(GenericStatus.SUCCESS, statuses.get("b"));
-        assertEquals(GenericStatus.QUEUED, StatusAndTiming.condenseStatus(statuses.values()));
+            assertNotNull(statuses);
+            assertEquals(GenericStatus.QUEUED, statuses.get("a"));
+            assertEquals(GenericStatus.SUCCESS, statuses.get("b"));
+            assertEquals(GenericStatus.QUEUED, StatusAndTiming.condenseStatus(statuses.values()));
 
-        j.createSlave("second-agent", "second", null);
-        SemaphoreStep.waitForStart("wait-a/1", b1);
+            j.createSlave("second-agent", "second", null);
+            SemaphoreStep.waitForStart("wait-a/1", b1);
 
 
-        // Now get the end nodes as of the entry of the semaphore on the `a` branch...
-        branchEndNodes = Arrays.asList(getNodes(execution, new int[]{18, 15}));
+            // Now get the end nodes as of the entry of the semaphore on the `a` branch...
+            branchEndNodes = Arrays.asList(getNodes(execution, new int[]{18, 15}));
 
-        statuses = StatusAndTiming.computeBranchStatuses2(b1, execution.getNode("5"), branchStartNodes, branchEndNodes, null);
+            statuses = StatusAndTiming.computeBranchStatuses2(b1, execution.getNode("5"), branchStartNodes, branchEndNodes, null);
 
-        assertNotNull(statuses);
-        assertEquals(GenericStatus.IN_PROGRESS, statuses.get("a"));
-        assertEquals(GenericStatus.SUCCESS, statuses.get("b"));
-        assertEquals(GenericStatus.IN_PROGRESS, StatusAndTiming.condenseStatus(statuses.values()));
+            assertNotNull(statuses);
+            assertEquals(GenericStatus.IN_PROGRESS, statuses.get("a"));
+            assertEquals(GenericStatus.SUCCESS, statuses.get("b"));
+            assertEquals(GenericStatus.IN_PROGRESS, StatusAndTiming.condenseStatus(statuses.values()));
 
-        SemaphoreStep.success("wait-a/1", null);
+            SemaphoreStep.success("wait-a/1", null);
         } finally {
             j.assertBuildStatusSuccess(j.waitForCompletion(b1));
         }
@@ -748,7 +753,7 @@ public class StatusAndTimingTest {
 
     @Test
     @Issue("JENKINS-47219")
-    public void parallelStagesOneSkipped() throws Exception {
+    void parallelStagesOneSkipped() throws Exception {
         WorkflowJob job = j.jenkins.createProject(WorkflowJob.class, "parallel stages, one skipped job");
         job.setDefinition(new CpsFlowDefinition("""
                 pipeline {
@@ -785,7 +790,7 @@ public class StatusAndTimingTest {
     }
 
     @Test
-    public void catchOutsideFailingStage() throws Exception {
+    void catchOutsideFailingStage() throws Exception {
         WorkflowJob job = j.jenkins.createProject(WorkflowJob.class, "catchOutsideFailingStage");
         job.setDefinition(new CpsFlowDefinition(
                 """
@@ -805,7 +810,7 @@ public class StatusAndTimingTest {
 
     @Test
     @Issue("JENKINS-43292")
-    public void parallelFailFast() throws Exception {
+    void parallelFailFast() throws Exception {
         WorkflowJob job = j.jenkins.createProject(WorkflowJob.class, "parallelFailFast");
         job.setDefinition(new CpsFlowDefinition(
                 """
@@ -830,7 +835,7 @@ public class StatusAndTimingTest {
 
     @Test
     @Issue("JENKINS-43292")
-    public void parallel() throws Exception {
+    void parallel() throws Exception {
         WorkflowJob job = j.jenkins.createProject(WorkflowJob.class, "parallel");
         job.setDefinition(new CpsFlowDefinition(
                 """
@@ -850,7 +855,7 @@ public class StatusAndTimingTest {
 
     @Test
     @Issue("JENKINS-39203")
-    public void unstableWithWarningAction() throws Exception {
+    void unstableWithWarningAction() throws Exception {
         WorkflowJob job = j.jenkins.createProject(WorkflowJob.class, "unstable");
         job.setDefinition(new CpsFlowDefinition(
                 """
@@ -877,7 +882,7 @@ public class StatusAndTimingTest {
 
     @Test
     @Issue("JENKINS-39203")
-    public void unstableInBlockScopeStep() throws Exception {
+    void unstableInBlockScopeStep() throws Exception {
         WorkflowJob job = j.jenkins.createProject(WorkflowJob.class, "unstableInBlockScopeStep");
         job.setDefinition(new CpsFlowDefinition(
                 """
@@ -897,7 +902,7 @@ public class StatusAndTimingTest {
 
     @Test
     @Issue("JENKINS-45579")
-    public void catchErrorWithStageResult() throws Exception {
+    void catchErrorWithStageResult() throws Exception {
         WorkflowJob job = j.jenkins.createProject(WorkflowJob.class, "catchErrorWithStageResult");
         job.setDefinition(new CpsFlowDefinition(
                 """
@@ -919,8 +924,8 @@ public class StatusAndTimingTest {
     }
 
     @Test
-    @Ignore
-    public void nestedStageParentStatus() throws Exception {
+    @Disabled
+    void nestedStageParentStatus() throws Exception {
         WorkflowJob job = j.jenkins.createProject(WorkflowJob.class, "unstable");
         job.setDefinition(new CpsFlowDefinition(
                 """
@@ -954,7 +959,7 @@ public class StatusAndTimingTest {
             if (run.isBuilding()) {
                 // TODO: This visitor could be made to work for in progress builds with some changes
                 // to how parallel branches are handled.
-                Assert.fail("Cannot find chunks for a run that is still in progress");
+                fail("Cannot find chunks for a run that is still in progress");
             }
             this.run = run;
             ForkScanner.visitSimpleChunks(run.getExecution().getCurrentHeads(), this, new StageChunkFinder());
