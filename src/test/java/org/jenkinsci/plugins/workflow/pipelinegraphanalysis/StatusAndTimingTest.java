@@ -319,13 +319,13 @@ public class StatusAndTimingTest {
         // Passing branch time, 5 ms pause was a present above
         TimingInfo successTiming = branchTimings.get("success");
         assertEquals(50L, successTiming.getPauseDurationMillis());
-        long successRunTime = doTiming(exec, 6, 13);
+        long successRunTime = doTiming(exec, 6, 12);
         assertEquals(successRunTime, successTiming.getTotalDurationMillis());
         assertEquals(TimingAction.getStartTime(exec.getNode("6")), successTiming.getStartTimeMillis());
 
         // Failing branch time, 50 ms pause was a present above
         TimingInfo failTiming = branchTimings.get("fail");
-        long failRunTime = doTiming(exec, 7, 13);
+        long failRunTime = doTiming(exec, 7, 10);
         assertEquals(Math.min(5L, failRunTime), failTiming.getPauseDurationMillis());
         assertEquals(failRunTime, failTiming.getTotalDurationMillis());
         assertEquals(TimingAction.getStartTime(exec.getNode("7")), failTiming.getStartTimeMillis());
