@@ -7,12 +7,18 @@ import org.jenkinsci.plugins.workflow.graphanalysis.MemoryFlowChunk;
 import org.jenkinsci.plugins.workflow.graphanalysis.StandardChunkVisitor;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
 import org.jvnet.hudson.test.JenkinsRule;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+
 import edu.umd.cs.findbugs.annotations.NonNull;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
+
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
@@ -22,10 +28,15 @@ import java.util.List;
  * Tests the stage collection
  * @author Sam Van Oort
  */
-public class StageTest {
+@WithJenkins
+class StageTest {
 
-    @Rule
-    public JenkinsRule jenkinsRule = new JenkinsRule();
+    private JenkinsRule jenkinsRule;
+
+    @BeforeEach
+    void setUp(JenkinsRule rule) {
+        jenkinsRule = rule;
+    }
 
     public static class CollectingChunkVisitor extends StandardChunkVisitor {
         final Deque<MemoryFlowChunk> allChunks = new ArrayDeque<>();
@@ -44,29 +55,29 @@ public class StageTest {
     /** Assert that chunk flownode IDs match expected, use 0 or -1 ID for null flownode */
     private static void assertChunkBoundary(FlowChunkWithContext chunk, int beforeId, int firstId, int lastId, int afterId) {
         // First check the chunk boundaries, then the before/after
-        Assert.assertNotNull(chunk.getFirstNode());
-        Assert.assertEquals(firstId, Integer.parseInt(chunk.getFirstNode().getId()));
-        Assert.assertNotNull(chunk.getLastNode());
-        Assert.assertEquals(lastId, Integer.parseInt(chunk.getLastNode().getId()));
+        assertNotNull(chunk.getFirstNode());
+        assertEquals(firstId, Integer.parseInt(chunk.getFirstNode().getId()));
+        assertNotNull(chunk.getLastNode());
+        assertEquals(lastId, Integer.parseInt(chunk.getLastNode().getId()));
 
         if (beforeId > 0) {
-            Assert.assertNotNull(chunk.getNodeBefore());
-            Assert.assertEquals(beforeId, Integer.parseInt(chunk.getNodeBefore().getId()));
+            assertNotNull(chunk.getNodeBefore());
+            assertEquals(beforeId, Integer.parseInt(chunk.getNodeBefore().getId()));
         } else {
-            Assert.assertNull(chunk.getNodeBefore());
+            assertNull(chunk.getNodeBefore());
         }
 
         if (afterId > 0) {
-            Assert.assertNotNull(chunk.getNodeAfter());
-            Assert.assertEquals(afterId, Integer.parseInt(chunk.getNodeAfter().getId()));
+            assertNotNull(chunk.getNodeAfter());
+            assertEquals(afterId, Integer.parseInt(chunk.getNodeAfter().getId()));
         } else {
-            Assert.assertNull(chunk.getNodeAfter());
+            assertNull(chunk.getNodeAfter());
         }
 
     }
 
     @Test
-    public void testBlockStage() throws Exception {
+    void testBlockStage() throws Exception {
         WorkflowJob job = jenkinsRule.jenkins.createProject(WorkflowJob.class, "Blocky job");
 
         job.setDefinition(new CpsFlowDefinition("""
@@ -139,7 +150,7 @@ public class StageTest {
         scan.visitSimpleChunks(visitor, new StageChunkFinder());
 
         List<MemoryFlowChunk> stages = visitor.getChunks();
-        Assert.assertEquals(3, stages.size());
+        assertEquals(3, stages.size());
         assertChunkBoundary(stages.get(0), 5, 6, 8, 9);
         assertChunkBoundary(stages.get(1), 10, 11, 13, 14);
         assertChunkBoundary(stages.get(2), 15, 16, 20, 21);
