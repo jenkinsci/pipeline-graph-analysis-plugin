@@ -263,7 +263,12 @@ public class StatusAndTiming {
                 if (exec.getCurrentHeads().size() > 1 && lastNode instanceof BlockEndNode) {  // Check to see if all the action is on other branches
                     BlockStartNode start = ((BlockEndNode)lastNode).getStartNode();
                     if (start.getAction(ThreadNameAction.class) != null) {
-                        return (lastNode.getError() == null) ? GenericStatus.SUCCESS : GenericStatus.FAILURE;
+                        GenericStatus status = GenericStatus.SUCCESS;
+                        WarningAction warningAction = findWorstWarningBetween(start, lastNode);
+                        if (warningAction != null) {
+                            status = GenericStatus.fromResult(warningAction.getResult());
+                        }
+                        return (lastNode.getError() != null) ? GenericStatus.FAILURE : status;
                     }
                 }
 
